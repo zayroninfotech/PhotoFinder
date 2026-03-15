@@ -8,18 +8,17 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:      #f8fafc;
-      --surface: #ffffff;
-      --border:  #e2e8f0;
-      --purple:  #b45309;
-      --purple2: #f59e0b;
-      --blue:    #1e3a8a;
-      --green:   #16a34a;
-      --red:     #dc2626;
-      --text:    #0f172a;
-      --muted:   #64748b;
-      --gold:    #f59e0b;
-      --navy:    #07091a;
+      --bg:     #f0f4ff;
+      --card:   #ffffff;
+      --border: #e2e8f0;
+      --gold:   #f59e0b;
+      --gold2:  #fbbf24;
+      --navy:   #07091a;
+      --blue:   #1e3a8a;
+      --green:  #16a34a;
+      --red:    #dc2626;
+      --text:   #0f172a;
+      --muted:  #64748b;
     }
 
     body {
@@ -29,445 +28,561 @@
       min-height: 100vh;
     }
 
-    /* ── Header ─────────────────────────────── */
-    header {
-      background: linear-gradient(135deg, #07091a 0%, #0f1630 60%, #1a2240 100%);
-      border-bottom: 2px solid rgba(245,158,11,0.3);
-      padding: 18px 24px 22px;
-      text-align: center;
-      color: #fff;
+    /* ══════════════════════════════════════════
+       HERO HEADER
+    ══════════════════════════════════════════ */
+    .hero {
+      background: linear-gradient(150deg, #07091a 0%, #0d1535 45%, #12204a 100%);
       position: relative;
+      overflow: hidden;
+      padding: 40px 24px 52px;
+      text-align: center;
     }
-    header::after {
-      content: '';
+
+    /* Animated background orbs */
+    .hero-orb {
       position: absolute;
-      bottom: 0; left: 50%; transform: translateX(-50%);
-      width: 80px; height: 2px;
-      background: linear-gradient(90deg, #f59e0b, #fbbf24);
-      border-radius: 2px;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(70px);
     }
-    .header-logo {
-      width: 52px; height: 52px;
+    .orb1 { width:360px;height:360px; background:rgba(30,58,138,.4); top:-130px; left:-100px; animation: orb-drift 9s ease-in-out infinite; }
+    .orb2 { width:280px;height:280px; background:rgba(245,158,11,.18); bottom:-100px; right:-80px; animation: orb-drift 7s ease-in-out infinite reverse; }
+    .orb3 { width:200px;height:200px; background:rgba(99,102,241,.2); top:40px; right:15%; animation: orb-drift 11s ease-in-out infinite 2s; }
+    @keyframes orb-drift {
+      0%,100% { transform: translate(0,0) scale(1); }
+      50%      { transform: translate(20px,15px) scale(1.08); }
+    }
+
+    .hero-content { position: relative; z-index: 2; }
+
+    .hero-logo {
+      width: 64px; height: 64px;
       object-fit: contain;
-      margin-bottom: 10px;
-      filter: drop-shadow(0 3px 14px rgba(245,158,11,0.5));
+      margin-bottom: 14px;
+      filter: drop-shadow(0 4px 20px rgba(245,158,11,.55));
+      animation: logo-pulse 3s ease-in-out infinite;
     }
-    .header-company {
-      font-size: .7rem;
-      font-weight: 700;
-      letter-spacing: .1em;
+    @keyframes logo-pulse {
+      0%,100% { filter: drop-shadow(0 4px 20px rgba(245,158,11,.55)); }
+      50%      { filter: drop-shadow(0 6px 30px rgba(245,158,11,.9)); }
+    }
+
+    .hero-company {
+      font-size: .68rem; font-weight: 700; letter-spacing: .12em;
       text-transform: uppercase;
       background: linear-gradient(90deg, #f59e0b, #fbbf24);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
-      margin-bottom: 6px;
+      margin-bottom: 10px;
     }
-    header h1 { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; }
-    header p  { font-size: .85rem; color: #94a3b8; margin-top: 4px; }
 
-    /* ── Status banner ───────────────────────── */
+    .hero-event {
+      font-size: 2rem; font-weight: 900; color: #f1f5f9;
+      line-height: 1.15; margin-bottom: 10px;
+      letter-spacing: -.02em;
+    }
+
+    .hero-sub {
+      font-size: .9rem; color: #94a3b8;
+      max-width: 380px; margin: 0 auto 24px;
+      line-height: 1.6;
+    }
+
+    /* Step chips */
+    .steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; flex-wrap: wrap;
+    }
+    .step-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 30px; padding: 6px 14px;
+      font-size: .75rem; color: #94a3b8;
+      font-weight: 500;
+    }
+    .step-chip .sc-num {
+      width: 18px; height: 18px;
+      background: linear-gradient(135deg,#b45309,#f59e0b);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .65rem; font-weight: 800; color: #0a0e1f;
+    }
+    .step-arr { color: rgba(255,255,255,.2); font-size: .75rem; }
+
+    /* Bottom wave */
+    .hero-wave {
+      position: absolute; bottom: -1px; left: 0; right: 0;
+      height: 40px; z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════
+       STATUS BANNER
+    ══════════════════════════════════════════ */
     .status-banner {
-      background: #fef3c7;
-      border-bottom: 1px solid #fde68a;
-      color: #92400e;
-      padding: 10px 20px;
-      text-align: center;
-      font-size: .85rem;
-      display: none;
+      background: #fef3c7; border-bottom: 1px solid #fde68a;
+      color: #92400e; padding: 10px 20px;
+      text-align: center; font-size: .85rem; display: none;
     }
-    .status-banner.show { display: block; }
-    .status-banner.error { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
-    .status-banner.ready { background: #dcfce7; border-color: #bbf7d0; color: #14532d; }
+    .status-banner.show  { display: block; }
+    .status-banner.error { background:#fee2e2; border-color:#fecaca; color:#991b1b; }
 
-    /* ── Content wrapper ─────────────────────── */
+    /* ══════════════════════════════════════════
+       CONTENT
+    ══════════════════════════════════════════ */
     .content {
       max-width: 680px;
       margin: 0 auto;
-      padding: 28px 16px 80px;
+      padding: 32px 16px 80px;
     }
 
-    /* ── Upload card ─────────────────────────── */
+    /* ══════════════════════════════════════════
+       UPLOAD CARD
+    ══════════════════════════════════════════ */
     .upload-card {
-      background: var(--surface);
+      background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 28px 24px;
+      border-radius: 24px;
+      padding: 32px 28px;
       margin-bottom: 28px;
-      box-shadow: 0 2px 12px rgba(0,0,0,.05);
+      box-shadow: 0 4px 24px rgba(0,0,0,.07), 0 1px 4px rgba(0,0,0,.04);
+      position: relative;
+      overflow: hidden;
     }
-    .upload-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
-    .upload-card .sub { font-size: .83rem; color: var(--muted); margin-bottom: 20px; }
+    /* Subtle gold top-border accent */
+    .upload-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #b45309, #f59e0b, #fbbf24, #f59e0b, #b45309);
+      background-size: 200% auto;
+      animation: shimmer 3s linear infinite;
+    }
+    @keyframes shimmer { to { background-position: 200% center; } }
+
+    .card-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.1rem; font-weight: 800; color: var(--text);
+      margin-bottom: 6px;
+    }
+    .card-title-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg,#b45309,#f59e0b);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .card-sub { font-size: .84rem; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
 
     /* Drop zone */
     .drop-zone {
       border: 2px dashed #cbd5e1;
-      border-radius: 14px;
-      padding: 36px 20px;
+      border-radius: 16px;
+      padding: 38px 20px;
       text-align: center;
       cursor: pointer;
-      transition: border-color .2s, background .2s;
+      transition: all .25s;
       position: relative;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     }
     .drop-zone:hover, .drop-zone.drag-over {
-      border-color: var(--purple);
-      background: rgba(124,58,237,.04);
+      border-color: var(--gold);
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      transform: scale(1.01);
     }
     .drop-zone input[type="file"] {
-      position: absolute; inset: 0;
-      opacity: 0; cursor: pointer;
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
     }
-    .drop-zone .dz-icon { font-size: 40px; margin-bottom: 10px; }
-    .drop-zone .dz-title { font-size: .95rem; font-weight: 600; color: #334155; }
-    .drop-zone .dz-sub   { font-size: .8rem; color: var(--muted); margin-top: 4px; }
-    .drop-zone .dz-sub span {
-      color: var(--purple);
-      font-weight: 600;
-      text-decoration: underline;
-    }
-
-    /* Preview after file selection */
-    .preview-area {
-      display: none;
-      align-items: center;
-      gap: 16px;
-      padding: 12px;
-      background: rgba(124,58,237,.06);
-      border: 1px solid rgba(124,58,237,.2);
-      border-radius: 12px;
-      margin-top: 14px;
-    }
-    .preview-area.show { display: flex; }
-    .preview-area img {
-      width: 64px; height: 64px;
-      object-fit: cover;
-      border-radius: 10px;
-    }
-    .preview-info { flex: 1; }
-    .preview-info .pname { font-size: .88rem; font-weight: 600; word-break: break-all; }
-    .preview-info .psize { font-size: .76rem; color: var(--muted); }
-    .preview-clear {
-      background: none; border: none; cursor: pointer;
-      color: var(--muted); font-size: 18px; line-height: 1;
-    }
-
-    .find-btn {
-      width: 100%;
-      padding: 13px;
-      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
-      border: none; border-radius: 12px;
-      color: #0a0e1f; font-size: 1rem; font-weight: 700;
-      cursor: pointer;
-      transition: opacity .2s, transform .1s;
-      margin-top: 16px;
-    }
-    .find-btn:hover  { opacity: .88; }
-    .find-btn:active { transform: scale(.98); }
-    .find-btn:disabled { opacity: .4; cursor: not-allowed; }
-
-    /* ── Loading overlay ─────────────────────── */
-    .loading {
-      display: none;
-      text-align: center;
-      padding: 32px;
-    }
-    .loading.show { display: block; }
-    .loader {
-      width: 48px; height: 48px;
-      border: 4px solid rgba(124,58,237,.15);
-      border-top-color: var(--purple);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-      margin: 0 auto 14px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading p { color: var(--muted); font-size: .88rem; }
-
-    /* ── Error ───────────────────────────────── */
-    .error-box {
-      background: #fee2e2;
-      border: 1px solid #fecaca;
-      color: #991b1b;
-      border-radius: 12px;
-      padding: 14px 18px;
-      font-size: .85rem;
-      margin-top: 16px;
-      display: none;
-    }
-    .error-box.show { display: block; }
-
-    /* ── Results ─────────────────────────────── */
-    .results-section { display: none; }
-    .results-section.show { display: block; }
-
-    .results-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .results-header h3 { font-size: 1.05rem; font-weight: 700; }
-    .results-count {
-      background: rgba(124,58,237,.1);
-      color: var(--purple);
-      font-size: .78rem;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 20px;
-    }
-
-    .photos-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    .photo-card {
-      position: relative;
-      border-radius: 12px;
-      overflow: hidden;
-      aspect-ratio: 1;
-      background: #e2e8f0;
-      cursor: pointer;
-      transition: transform .2s, box-shadow .2s;
-    }
-    .photo-card:hover { transform: scale(1.03); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
-    .photo-card img {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    .photo-card .photo-overlay {
-      position: absolute; inset: 0;
-      background: rgba(0,0,0,.5);
+    .dz-icon-wrap {
+      width: 64px; height: 64px; margin: 0 auto 14px;
+      background: linear-gradient(135deg,rgba(180,83,9,.12),rgba(245,158,11,.12));
+      border-radius: 18px;
       display: flex; align-items: center; justify-content: center;
-      opacity: 0;
-      transition: opacity .2s;
+      font-size: 30px;
     }
-    .photo-card:hover .photo-overlay { opacity: 1; }
-    .photo-card .photo-overlay span {
-      color: #fff; font-size: 28px;
+    .dz-title { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    .dz-sub   { font-size: .8rem; color: var(--muted); }
+    .dz-sub span { color: var(--gold); font-weight: 600; text-decoration: underline; }
+    .dz-formats {
+      display: inline-flex; gap: 6px; margin-top: 10px;
+    }
+    .dz-badge {
+      background: rgba(245,158,11,.1); color: #b45309;
+      font-size: .68rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 6px; border: 1px solid rgba(245,158,11,.2);
     }
 
-    /* ── Action row ──────────────────────────── */
-    .action-row {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .btn-action {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 13px;
-      border-radius: 12px;
-      font-size: .95rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: opacity .2s, transform .1s;
-      text-decoration: none;
-    }
-    .btn-action:active { transform: scale(.98); }
-    .btn-dl   { background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24); color: #0a0e1f; font-weight: 700; }
-    .btn-mail { background: var(--surface); border: 1px solid var(--border) !important; color: var(--text); }
-    .btn-mail:hover { background: var(--bg); }
-
-    /* Email modal */
-    .modal-backdrop {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.5);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 200;
-      opacity: 0; pointer-events: none;
-      transition: opacity .2s;
-    }
-    .modal-backdrop.show { opacity: 1; pointer-events: all; }
-    .modal {
-      background: #fff;
-      border-radius: 20px;
-      padding: 28px 24px;
-      width: 100%;
-      max-width: 400px;
-      margin: 16px;
-      transform: translateY(20px);
-      transition: transform .3s;
-    }
-    .modal-backdrop.show .modal { transform: translateY(0); }
-    .modal h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
-    .modal p  { font-size: .83rem; color: var(--muted); margin-bottom: 18px; }
-    .modal input {
-      width: 100%; padding: 11px 14px;
-      border: 1px solid var(--border); border-radius: 10px;
-      font-size: .9rem; outline: none;
-      transition: border-color .2s;
-      margin-bottom: 12px;
-    }
-    .modal input:focus { border-color: var(--purple); }
-    .modal-btns { display: flex; gap: 10px; }
-    .modal-btns button {
-      flex: 1; padding: 11px; border-radius: 10px;
-      font-size: .88rem; font-weight: 600; cursor: pointer; border: none;
-      transition: opacity .2s;
-    }
-    .modal-btns .btn-send {
-      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24); color: #0a0e1f; font-weight: 700;
-    }
-    .modal-btns .btn-cancel { background: #f1f5f9; color: var(--text); }
-    .modal-btns button:hover { opacity: .85; }
-
-    /* lightbox */
-    .lightbox {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.92);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 300;
-      opacity: 0; pointer-events: none;
-      transition: opacity .2s;
-    }
-    .lightbox.show { opacity: 1; pointer-events: all; }
-    .lightbox img {
-      max-width: 92vw; max-height: 88vh;
-      border-radius: 12px;
-      object-fit: contain;
-    }
-    .lightbox-close {
-      position: absolute; top: 20px; right: 20px;
-      background: rgba(255,255,255,.15);
-      border: none; color: #fff; font-size: 22px;
-      width: 42px; height: 42px; border-radius: 50%;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-    }
-    .lightbox-close:hover { background: rgba(255,255,255,.25); }
-
-    /* Camera button */
+    /* Divider */
     .or-divider {
-      display: flex; align-items: center; gap: 10px;
-      margin: 14px 0; color: var(--muted); font-size: .8rem;
+      display: flex; align-items: center; gap: 12px;
+      margin: 18px 0; color: var(--muted); font-size: .78rem; font-weight: 600;
     }
     .or-divider::before, .or-divider::after {
       content: ''; flex: 1; height: 1px; background: var(--border);
     }
-    .camera-btn {
-      width: 100%;
-      padding: 11px;
-      background: rgba(30,58,138,.08);
-      border: 1.5px solid rgba(30,58,138,.2);
-      border-radius: 12px;
-      color: var(--blue);
-      font-size: .92rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .2s, border-color .2s;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
-    .camera-btn:hover { background: rgba(30,58,138,.14); border-color: rgba(30,58,138,.4); }
 
-    /* Camera modal */
+    /* Camera button */
+    .camera-btn {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #07091a 0%, #0d1535 100%);
+      border: 1.5px solid rgba(245,158,11,.25);
+      border-radius: 14px;
+      color: #f1f5f9; font-size: .95rem; font-weight: 700;
+      cursor: pointer;
+      transition: all .25s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      position: relative; overflow: hidden;
+    }
+    .camera-btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(245,158,11,.08), rgba(251,191,36,.05));
+      opacity: 0; transition: opacity .25s;
+    }
+    .camera-btn:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,158,11,.2); }
+    .camera-btn:hover::before { opacity: 1; }
+    .cam-btn-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg,#b45309,#f59e0b);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+
+    /* Preview */
+    .preview-area {
+      display: none; align-items: center; gap: 14px;
+      padding: 14px 16px;
+      background: linear-gradient(135deg,#fffbeb,#fef3c7);
+      border: 1.5px solid rgba(245,158,11,.3);
+      border-radius: 14px; margin-top: 16px;
+    }
+    .preview-area.show { display: flex; }
+    .preview-area img {
+      width: 70px; height: 70px;
+      object-fit: cover; border-radius: 12px;
+      border: 2px solid rgba(245,158,11,.4);
+    }
+    .preview-info { flex: 1; }
+    .preview-info .pname { font-size: .88rem; font-weight: 700; word-break: break-all; color: #0f172a; }
+    .preview-info .psize { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+    .preview-info .pready {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: .72rem; color: #16a34a; font-weight: 700; margin-top: 4px;
+    }
+    .preview-clear {
+      background: rgba(0,0,0,.06); border: none; cursor: pointer;
+      color: var(--muted); font-size: 16px; line-height: 1;
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .preview-clear:hover { background: rgba(239,68,68,.1); color: #dc2626; }
+
+    /* Find button */
+    .find-btn {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
+      border: none; border-radius: 14px;
+      color: #0a0e1f; font-size: 1.05rem; font-weight: 800;
+      cursor: pointer;
+      transition: all .2s;
+      margin-top: 18px;
+      letter-spacing: .01em;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 20px rgba(245,158,11,.35);
+    }
+    .find-btn:hover  { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(245,158,11,.5); }
+    .find-btn:active { transform: scale(.98); }
+    .find-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* Error */
+    .error-box {
+      background: #fee2e2; border: 1px solid #fecaca;
+      color: #991b1b; border-radius: 12px;
+      padding: 12px 16px; font-size: .84rem; margin-top: 14px;
+      display: none; align-items: center; gap: 8px;
+    }
+    .error-box.show { display: flex; }
+
+    /* Loading */
+    .loading { display: none; text-align: center; padding: 28px 0; }
+    .loading.show { display: block; }
+    .loader-wrap { position: relative; width: 56px; height: 56px; margin: 0 auto 16px; }
+    .loader-ring {
+      position: absolute; inset: 0;
+      border: 3px solid rgba(245,158,11,.15);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    .loader-ring-2 {
+      position: absolute; inset: 8px;
+      border: 2px solid rgba(30,58,138,.15);
+      border-bottom-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1.2s linear infinite reverse;
+    }
+    .loader-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: .9rem; color: var(--muted); }
+    .loading-text strong { color: var(--text); display: block; font-size: 1rem; margin-bottom: 4px; }
+
+    /* ══════════════════════════════════════════
+       RESULTS
+    ══════════════════════════════════════════ */
+    .results-section { display: none; }
+    .results-section.show { display: block; }
+
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+    }
+    .results-header h3 { font-size: 1.15rem; font-weight: 800; }
+    .results-count {
+      background: linear-gradient(135deg,rgba(180,83,9,.12),rgba(245,158,11,.12));
+      color: #b45309; font-size: .78rem; font-weight: 800;
+      padding: 5px 14px; border-radius: 20px;
+      border: 1px solid rgba(245,158,11,.2);
+    }
+
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px; margin-bottom: 28px;
+    }
+    .photo-card {
+      position: relative; border-radius: 14px;
+      overflow: hidden; aspect-ratio: 1;
+      background: #e2e8f0; cursor: pointer;
+      transition: transform .25s, box-shadow .25s;
+      box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    }
+    .photo-card:hover { transform: scale(1.04); box-shadow: 0 12px 32px rgba(0,0,0,.18); }
+    .photo-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-card .photo-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(180,83,9,.7), rgba(245,158,11,.5));
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .2s;
+    }
+    .photo-card:hover .photo-overlay { opacity: 1; }
+    .photo-overlay-icon { font-size: 28px; }
+
+    /* Action buttons */
+    .action-row { display: flex; flex-direction: column; gap: 12px; }
+    .btn-action {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 14px; border-radius: 14px;
+      font-size: .96rem; font-weight: 700;
+      cursor: pointer; border: none;
+      transition: all .2s; text-decoration: none;
+    }
+    .btn-action:active { transform: scale(.98); }
+    .btn-dl {
+      background: linear-gradient(135deg,#b45309,#f59e0b,#fbbf24);
+      color: #0a0e1f;
+      box-shadow: 0 4px 20px rgba(245,158,11,.3);
+    }
+    .btn-dl:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(245,158,11,.45); }
+    .btn-mail {
+      background: var(--card); border: 1.5px solid var(--border) !important;
+      color: var(--text);
+    }
+    .btn-mail:hover { background: #f8fafc; border-color: #94a3b8 !important; }
+
+    /* ══════════════════════════════════════════
+       CAMERA MODAL
+    ══════════════════════════════════════════ */
     .cam-backdrop {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,.85);
+      background: rgba(0,0,0,.88);
       display: flex; align-items: center; justify-content: center;
-      z-index: 400;
-      opacity: 0; pointer-events: none;
-      transition: opacity .25s;
+      z-index: 400; opacity: 0; pointer-events: none; transition: opacity .25s;
     }
     .cam-backdrop.show { opacity: 1; pointer-events: all; }
     .cam-box {
       background: #0f172a;
-      border-radius: 20px;
-      padding: 20px;
-      width: 100%; max-width: 480px;
-      margin: 16px;
-      text-align: center;
-      color: #f1f5f9;
+      border: 1px solid rgba(245,158,11,.15);
+      border-radius: 24px; padding: 24px;
+      width: 100%; max-width: 500px; margin: 16px;
+      text-align: center; color: #f1f5f9;
+      box-shadow: 0 30px 80px rgba(0,0,0,.6);
     }
-    .cam-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 14px; }
+    .cam-box h3 { font-size: 1.05rem; font-weight: 800; margin-bottom: 16px; }
     .cam-video {
-      width: 100%; border-radius: 14px;
-      background: #000;
-      max-height: 340px;
-      object-fit: cover;
-      transform: scaleX(-1); /* mirror front cam */
+      width: 100%; border-radius: 16px; background: #000;
+      max-height: 360px; object-fit: cover; transform: scaleX(-1);
+      border: 1.5px solid rgba(245,158,11,.2);
     }
     .cam-canvas { display: none; }
-    .cam-actions { display: flex; gap: 10px; margin-top: 14px; }
+    .cam-actions { display: flex; gap: 10px; margin-top: 16px; }
     .cam-capture {
-      flex: 2; padding: 13px;
-      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
+      flex: 2; padding: 14px;
+      background: linear-gradient(135deg,#b45309,#f59e0b,#fbbf24);
       border: none; border-radius: 12px;
-      color: #0a0e1f; font-size: 1rem; font-weight: 700; cursor: pointer;
+      color: #0a0e1f; font-size: 1rem; font-weight: 800; cursor: pointer;
+      transition: all .2s;
     }
+    .cam-capture:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245,158,11,.4); }
     .cam-close {
-      flex: 1; padding: 13px;
-      background: rgba(255,255,255,.07);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 12px; color: #94a3b8;
-      font-size: .9rem; font-weight: 600; cursor: pointer;
+      flex: 1; padding: 14px;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px; color: #94a3b8; font-size: .9rem; font-weight: 600; cursor: pointer;
+      transition: background .2s;
     }
-    .cam-error {
-      color: #fca5a5; font-size: .82rem; margin-top: 10px;
-      display: none;
-    }
+    .cam-close:hover { background: rgba(255,255,255,.1); }
+    .cam-error { color: #fca5a5; font-size: .82rem; margin-top: 12px; display: none; }
     .cam-error.show { display: block; }
+
+    /* ══════════════════════════════════════════
+       EMAIL MODAL
+    ══════════════════════════════════════════ */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-backdrop.show { opacity: 1; pointer-events: all; }
+    .modal {
+      background: #fff; border-radius: 22px; padding: 30px 26px;
+      width: 100%; max-width: 400px; margin: 16px;
+      transform: translateY(20px); transition: transform .3s;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    }
+    .modal-backdrop.show .modal { transform: translateY(0); }
+    .modal h3 { font-size: 1.05rem; font-weight: 800; margin-bottom: 6px; }
+    .modal p  { font-size: .83rem; color: var(--muted); margin-bottom: 18px; }
+    .modal input {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: .9rem; outline: none; transition: border-color .2s; margin-bottom: 14px;
+    }
+    .modal input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(245,158,11,.1); }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btns button {
+      flex: 1; padding: 12px; border-radius: 10px;
+      font-size: .9rem; font-weight: 700; cursor: pointer; border: none; transition: opacity .2s;
+    }
+    .btn-send { background: linear-gradient(135deg,#b45309,#f59e0b,#fbbf24); color: #0a0e1f; }
+    .btn-cancel { background: #f1f5f9; color: var(--text); }
+    .modal-btns button:hover { opacity: .85; }
+
+    /* ══════════════════════════════════════════
+       LIGHTBOX
+    ══════════════════════════════════════════ */
+    .lightbox {
+      position: fixed; inset: 0; background: rgba(0,0,0,.94);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 300; opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .lightbox.show { opacity: 1; pointer-events: all; }
+    .lightbox img { max-width: 92vw; max-height: 88vh; border-radius: 14px; object-fit: contain; }
+    .lightbox-close {
+      position: absolute; top: 20px; right: 20px;
+      background: rgba(255,255,255,.12); border: none; color: #fff;
+      font-size: 20px; width: 44px; height: 44px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .lightbox-close:hover { background: rgba(255,255,255,.25); }
+
+    /* ══════════════════════════════════════════
+       FOOTER
+    ══════════════════════════════════════════ */
+    .footer {
+      text-align: center; padding: 28px 16px;
+      border-top: 1px solid var(--border); margin-top: 16px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .footer img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(245,158,11,.3)); }
+    .footer span { font-size: .8rem; color: #94a3b8; }
+    .footer strong { color: #64748b; }
 
     /* Toast */
     .toast {
       position: fixed; bottom: 24px; left: 50%;
       transform: translateX(-50%) translateY(20px);
-      background: #1e293b; color: #f1f5f9;
-      padding: 11px 22px; border-radius: 30px;
-      font-size: .85rem; font-weight: 500;
-      box-shadow: 0 6px 24px rgba(0,0,0,.3);
-      opacity: 0; pointer-events: none;
-      transition: all .3s; white-space: nowrap;
-      z-index: 999;
+      background: #0f172a; color: #f1f5f9;
+      padding: 12px 24px; border-radius: 30px;
+      font-size: .85rem; font-weight: 600;
+      box-shadow: 0 8px 30px rgba(0,0,0,.35);
+      opacity: 0; pointer-events: none; transition: all .3s; white-space: nowrap; z-index: 999;
+      border: 1px solid rgba(245,158,11,.2);
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
 
-<header>
-  <img src="/static/logo.png" alt="Zayron Infotech" class="header-logo">
-  <div class="header-company">Zayron Infotech Pvt. Ltd.</div>
-  <h1>{{ event.name }}</h1>
-  <p>Upload your selfie to find all your photos from this event</p>
-</header>
+<!-- ══ HERO HEADER ══════════════════════════════════════════ -->
+<div class="hero">
+  <div class="hero-orb orb1"></div>
+  <div class="hero-orb orb2"></div>
+  <div class="hero-orb orb3"></div>
 
-<!-- Status banner (shown while processing) -->
+  <div class="hero-content">
+    <img src="/static/logo.png" alt="Zayron Infotech" class="hero-logo">
+    <div class="hero-company">Zayron Infotech Pvt. Ltd.</div>
+    <h1 class="hero-event">{{ event.name }}</h1>
+    <p class="hero-sub">Your personal photo gallery from this event — found instantly using AI face recognition.</p>
+
+    <div class="steps">
+      <div class="step-chip"><div class="sc-num">1</div> Upload Selfie</div>
+      <div class="step-arr">›</div>
+      <div class="step-chip"><div class="sc-num">2</div> AI Matches</div>
+      <div class="step-arr">›</div>
+      <div class="step-chip"><div class="sc-num">3</div> Download Photos</div>
+    </div>
+  </div>
+
+  <svg class="hero-wave" viewBox="0 0 1440 40" fill="none" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 40 C360 0 1080 0 1440 40 L1440 40 L0 40 Z" fill="#f0f4ff"/>
+  </svg>
+</div>
+
+<!-- Status banner -->
 <div class="status-banner" id="statusBanner">
   ⏳ Photos are still being processed. You can upload your selfie, but results may be incomplete.
 </div>
 
 <div class="content">
 
-  <!-- Upload card -->
+  <!-- ══ UPLOAD CARD ══════════════════════════════════════ -->
   <div class="upload-card">
-    <h2>🤳 Upload Your Selfie</h2>
-    <p class="sub">A clear front-facing photo works best. We'll match it against all event photos.</p>
+    <div class="card-title">
+      <div class="card-title-icon">🤳</div>
+      Upload Your Selfie
+    </div>
+    <p class="card-sub">Take or upload a clear front-facing photo — we'll match it against all event photos instantly.</p>
 
+    <!-- Drop zone -->
     <div class="drop-zone" id="dropZone">
       <input type="file" id="fileInput" accept="image/*" onchange="handleFile(this.files[0])">
-      <div class="dz-icon">📷</div>
+      <div class="dz-icon-wrap">📷</div>
       <div class="dz-title">Drop your photo here</div>
-      <div class="dz-sub">or <span>browse files</span> &bull; JPG / PNG / WEBP</div>
+      <div class="dz-sub">or <span>browse files</span></div>
+      <div class="dz-formats">
+        <span class="dz-badge">JPG</span>
+        <span class="dz-badge">PNG</span>
+        <span class="dz-badge">WEBP</span>
+      </div>
     </div>
 
     <!-- Camera option -->
-    <div class="or-divider">or</div>
+    <div class="or-divider">or use your camera</div>
     <button class="camera-btn" onclick="openCamera()">
-      📸 Take Photo with Camera
+      <div class="cam-btn-icon">📸</div>
+      Take Photo with Camera
     </button>
 
+    <!-- Preview -->
     <div class="preview-area" id="previewArea">
       <img id="previewImg" src="" alt="preview">
       <div class="preview-info">
         <div class="pname" id="previewName"></div>
         <div class="psize" id="previewSize"></div>
+        <div class="pready">✅ Ready to search</div>
       </div>
       <button class="preview-clear" onclick="clearFile()" title="Remove">✕</button>
     </div>
@@ -479,12 +594,19 @@
     </button>
 
     <div class="loading" id="loadingArea">
-      <div class="loader"></div>
-      <p>Analysing your photo…<br>Comparing with event photos…</p>
+      <div class="loader-wrap">
+        <div class="loader-ring"></div>
+        <div class="loader-ring-2"></div>
+        <div class="loader-icon">🔍</div>
+      </div>
+      <div class="loading-text">
+        <strong>Analysing your photo…</strong>
+        Comparing faces across all event photos
+      </div>
     </div>
   </div>
 
-  <!-- Results section -->
+  <!-- ══ RESULTS ══════════════════════════════════════════ -->
   <div class="results-section" id="resultsSection">
     <div class="results-header">
       <h3>📸 Your Photos Found</h3>
@@ -505,7 +627,7 @@
 
 </div>
 
-<!-- Email modal -->
+<!-- ══ EMAIL MODAL ══════════════════════════════════════════ -->
 <div class="modal-backdrop" id="emailModal" onclick="closeEmailModal(event)">
   <div class="modal">
     <h3>✉ Send Photos by Email</h3>
@@ -518,7 +640,7 @@
   </div>
 </div>
 
-<!-- Camera modal -->
+<!-- ══ CAMERA MODAL ══════════════════════════════════════════ -->
 <div class="cam-backdrop" id="camBackdrop">
   <div class="cam-box">
     <h3>📸 Take a Selfie</h3>
@@ -526,35 +648,32 @@
     <canvas class="cam-canvas" id="camCanvas"></canvas>
     <p class="cam-error" id="camError">⚠ Camera not available. Please allow camera access or use file upload.</p>
     <div class="cam-actions">
-      <button class="cam-capture" onclick="capturePhoto()">📸 Capture</button>
+      <button class="cam-capture" onclick="capturePhoto()">📸 Capture Photo</button>
       <button class="cam-close"   onclick="closeCamera()">✕ Close</button>
     </div>
   </div>
 </div>
 
-<!-- Lightbox -->
+<!-- ══ LIGHTBOX ══════════════════════════════════════════════ -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightboxImg" src="" alt="">
 </div>
 
-<!-- Footer -->
-<footer style="text-align:center;padding:28px 16px;border-top:1px solid #e2e8f0;margin-top:20px;">
-  <img src="/static/logo.png" alt="Zayron Infotech" style="width:32px;height:32px;object-fit:contain;vertical-align:middle;margin-right:8px;filter:drop-shadow(0 2px 6px rgba(245,158,11,0.3));">
-  <span style="font-size:.8rem;color:#94a3b8;vertical-align:middle;">
-    Powered by <strong style="color:#64748b;">Zayron Infotech Pvt. Ltd.</strong>
-  </span>
-</footer>
+<!-- ══ FOOTER ════════════════════════════════════════════════ -->
+<div class="footer">
+  <img src="/static/logo.png" alt="Zayron Infotech">
+  <span>Powered by <strong>Zayron Infotech Pvt. Ltd.</strong></span>
+</div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-  const EVENT_ID  = "{{ event.id }}";
+  const EVENT_ID   = "{{ event.id }}";
   let   selectedFile = null;
   let   sessionId    = null;
-  let   matchedPhotos = [];
 
-  // ── Event status check ────────────────────────────────────────────────────
+  // ── Event status ──────────────────────────────────────────────────────────
   async function checkEventStatus() {
     try {
       const r = await fetch(`/event/${EVENT_ID}/status`);
@@ -578,30 +697,24 @@
   dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
   dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
   dz.addEventListener('drop', e => {
-    e.preventDefault();
-    dz.classList.remove('drag-over');
+    e.preventDefault(); dz.classList.remove('drag-over');
     const f = e.dataTransfer.files[0];
     if (f) handleFile(f);
   });
 
   function handleFile(file) {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      showError('Please select an image file (JPG, PNG, WEBP).');
-      return;
-    }
+    if (!file.type.startsWith('image/')) { showError('Please select an image file (JPG, PNG, WEBP).'); return; }
     selectedFile = file;
     const reader = new FileReader();
     reader.onload = e => {
-      document.getElementById('previewImg').src   = e.target.result;
+      document.getElementById('previewImg').src  = e.target.result;
       document.getElementById('previewName').textContent = file.name;
       document.getElementById('previewSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
       document.getElementById('previewArea').classList.add('show');
     };
     reader.readAsDataURL(file);
-    hideError();
-    // Reset results
-    hideResults();
+    hideError(); hideResults();
   }
 
   function clearFile() {
@@ -609,22 +722,17 @@
     document.getElementById('fileInput').value = '';
     document.getElementById('previewArea').classList.remove('show');
     document.getElementById('previewImg').src = '';
-    hideResults();
-    hideError();
+    hideResults(); hideError();
   }
 
   // ── Find photos ───────────────────────────────────────────────────────────
   async function findPhotos() {
-    if (!selectedFile) {
-      showError('Please select a selfie photo first.');
-      return;
-    }
+    if (!selectedFile) { showError('Please select or take a selfie photo first.'); return; }
 
     const btn = document.getElementById('findBtn');
     btn.disabled = true;
     document.getElementById('loadingArea').classList.add('show');
-    hideError();
-    hideResults();
+    hideError(); hideResults();
 
     const fd = new FormData();
     fd.append('photo', selectedFile);
@@ -633,18 +741,11 @@
     try {
       const resp = await fetch(`/event/${EVENT_ID}/upload`, { method: 'POST', body: fd });
       const data = await resp.json();
-
-      if (!resp.ok) {
-        showError(data.error || 'Something went wrong. Please try again.');
-        return;
-      }
-
-      sessionId     = data.session_id;
-      matchedPhotos = data.photos;
+      if (!resp.ok) { showError(data.error || 'Something went wrong. Please try again.'); return; }
+      sessionId = data.session_id;
       showResults(data);
-    } catch (e) {
-      showError('Network error. Please check your connection.');
-    } finally {
+    } catch { showError('Network error. Please check your connection.'); }
+    finally {
       btn.disabled = false;
       document.getElementById('loadingArea').classList.remove('show');
     }
@@ -660,12 +761,12 @@
     dlBtn.href = `/download/${data.session_id}`;
 
     grid.innerHTML = '';
-    data.photos.forEach((ph, i) => {
+    data.photos.forEach(ph => {
       const card = document.createElement('div');
       card.className = 'photo-card';
       card.innerHTML = `
         <img src="${ph.url}" alt="${ph.filename}" loading="lazy">
-        <div class="photo-overlay"><span>🔍</span></div>
+        <div class="photo-overlay"><span class="photo-overlay-icon">🔍</span></div>
       `;
       card.onclick = () => openLightbox(ph.url);
       grid.appendChild(card);
@@ -687,9 +788,7 @@
     el.textContent = '⚠ ' + msg;
     el.classList.add('show');
   }
-  function hideError() {
-    document.getElementById('errorBox').classList.remove('show');
-  }
+  function hideError() { document.getElementById('errorBox').classList.remove('show'); }
 
   // ── Lightbox ──────────────────────────────────────────────────────────────
   function openLightbox(url) {
@@ -709,37 +808,23 @@
     document.getElementById('emailInput').focus();
   }
   function closeEmailModal(e) {
-    if (!e || e.target === document.getElementById('emailModal')) {
+    if (!e || e.target === document.getElementById('emailModal'))
       document.getElementById('emailModal').classList.remove('show');
-    }
   }
-
   async function sendEmail() {
     const email = document.getElementById('emailInput').value.trim();
-    if (!email || !email.includes('@')) {
-      toast('⚠ Enter a valid email address.');
-      return;
-    }
+    if (!email || !email.includes('@')) { toast('⚠ Enter a valid email address.'); return; }
     const btn = document.querySelector('.btn-send');
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
-
+    btn.disabled = true; btn.textContent = 'Sending…';
     const resp = await fetch('/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, session_id: sessionId }),
     });
     const data = await resp.json();
-
-    btn.disabled = false;
-    btn.textContent = 'Send Photos →';
-
-    if (resp.ok) {
-      closeEmailModal();
-      toast(`✅ Photos sent to ${email}!`);
-    } else {
-      toast('❌ ' + (data.error || 'Failed to send email.'));
-    }
+    btn.disabled = false; btn.textContent = 'Send Photos →';
+    if (resp.ok) { closeEmailModal(); toast(`✅ Photos sent to ${email}!`); }
+    else toast('❌ ' + (data.error || 'Failed to send email.'));
   }
 
   // ── Camera ────────────────────────────────────────────────────────────────
@@ -751,16 +836,15 @@
     const errEl    = document.getElementById('camError');
     errEl.classList.remove('show');
     backdrop.classList.add('show');
-
     try {
       camStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false
       });
       video.srcObject = camStream;
-    } catch (err) {
+    } catch {
       errEl.classList.add('show');
-      errEl.textContent = '⚠ Camera access denied or not available. Please allow camera permission and try again.';
+      errEl.textContent = '⚠ Camera access denied. Please allow camera permission and try again.';
     }
   }
 
@@ -768,27 +852,19 @@
     const video  = document.getElementById('camVideo');
     const canvas = document.getElementById('camCanvas');
     if (!camStream || !video.srcObject) return;
-
     canvas.width  = video.videoWidth  || 640;
     canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext('2d');
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1); // mirror to match preview
+    ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0);
-
     canvas.toBlob(blob => {
       const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
-      closeCamera();
-      handleFile(file);
-      toast('📸 Photo captured!');
+      closeCamera(); handleFile(file); toast('📸 Photo captured!');
     }, 'image/jpeg', 0.92);
   }
 
   function closeCamera() {
-    if (camStream) {
-      camStream.getTracks().forEach(t => t.stop());
-      camStream = null;
-    }
+    if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
     document.getElementById('camVideo').srcObject = null;
     document.getElementById('camBackdrop').classList.remove('show');
   }
@@ -796,8 +872,7 @@
   // ── Toast ─────────────────────────────────────────────────────────────────
   function toast(msg) {
     const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.classList.add('show');
+    el.textContent = msg; el.classList.add('show');
     setTimeout(() => el.classList.remove('show'), 3500);
   }
 </script>
