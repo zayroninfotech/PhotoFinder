@@ -329,7 +329,9 @@ def admin_submit():
     images_dir = event_dir / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
 
-    user_url  = f"http://{request.host}/event/{event_id}"
+    # Use X-Forwarded-Proto so HTTPS is preserved behind Render's proxy
+    scheme   = request.headers.get("X-Forwarded-Proto", request.scheme)
+    user_url = f"{scheme}://{request.host}/event/{event_id}"
 
     meta = {
         "id":          event_id,
