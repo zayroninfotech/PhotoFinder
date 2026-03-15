@@ -2,9 +2,9 @@
 #  config.py  –  Edit these before running
 # ─────────────────────────────────────────────
 
-# Admin credentials
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"
+# Admin credentials  (Superadmin)
+ADMIN_USERNAME = "vamsi"
+ADMIN_PASSWORD = "zayron@2026"
 
 # Flask secret key  (change this to something random)
 SECRET_KEY = "change-this-secret-key-xyz-2024"

@@ -8,7 +8,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: ADMIN_USERNAME
-        value: admin
+        value: vamsi
       - key: ADMIN_PASSWORD
         sync: false
       - key: EMAIL_SENDER
