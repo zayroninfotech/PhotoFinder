@@ -165,7 +165,13 @@ def build_encodings(event_dir: Path, status_path: Path):
     imgs = [p for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS]
 
     if not imgs:
-        _set_status(status_path, "error", "No images found in Drive folder")
+        msg = ("No images found. Make sure your Google Drive folder is shared "
+               "publicly (Anyone with the link → Viewer).")
+        _set_status(status_path, "error", msg)
+        # Also mark meta so user page shows the real error
+        _meta = _load_meta(event_dir / "meta.json")
+        _meta["status"] = "error"
+        _save_meta(event_dir / "meta.json", _meta)
         return
 
     _set_status(status_path, "indexing",
@@ -485,7 +491,12 @@ def upload_selfie(event_id):
 
     if not meta:
         return jsonify({"error": "Event not found"}), 404
-    if meta.get("status") != "ready":
+    event_status = meta.get("status")
+    if event_status == "error":
+        st_msg = _load_meta(event_dir / "status.json").get(
+            "message", "Event processing failed.")
+        return jsonify({"error": f"⚠️ {st_msg}"}), 503
+    if event_status != "ready":
         return jsonify({"error": "Event photos are still being processed. Please try again shortly."}), 503
 
     # Save selfie
