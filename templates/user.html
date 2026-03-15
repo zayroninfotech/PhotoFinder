@@ -343,6 +343,77 @@
     }
     .lightbox-close:hover { background: rgba(255,255,255,.25); }
 
+    /* Camera button */
+    .or-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 14px 0; color: var(--muted); font-size: .8rem;
+    }
+    .or-divider::before, .or-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+    .camera-btn {
+      width: 100%;
+      padding: 11px;
+      background: rgba(30,58,138,.08);
+      border: 1.5px solid rgba(30,58,138,.2);
+      border-radius: 12px;
+      color: var(--blue);
+      font-size: .92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, border-color .2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .camera-btn:hover { background: rgba(30,58,138,.14); border-color: rgba(30,58,138,.4); }
+
+    /* Camera modal */
+    .cam-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.85);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 400;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    .cam-backdrop.show { opacity: 1; pointer-events: all; }
+    .cam-box {
+      background: #0f172a;
+      border-radius: 20px;
+      padding: 20px;
+      width: 100%; max-width: 480px;
+      margin: 16px;
+      text-align: center;
+      color: #f1f5f9;
+    }
+    .cam-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 14px; }
+    .cam-video {
+      width: 100%; border-radius: 14px;
+      background: #000;
+      max-height: 340px;
+      object-fit: cover;
+      transform: scaleX(-1); /* mirror front cam */
+    }
+    .cam-canvas { display: none; }
+    .cam-actions { display: flex; gap: 10px; margin-top: 14px; }
+    .cam-capture {
+      flex: 2; padding: 13px;
+      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
+      border: none; border-radius: 12px;
+      color: #0a0e1f; font-size: 1rem; font-weight: 700; cursor: pointer;
+    }
+    .cam-close {
+      flex: 1; padding: 13px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px; color: #94a3b8;
+      font-size: .9rem; font-weight: 600; cursor: pointer;
+    }
+    .cam-error {
+      color: #fca5a5; font-size: .82rem; margin-top: 10px;
+      display: none;
+    }
+    .cam-error.show { display: block; }
+
     /* Toast */
     .toast {
       position: fixed; bottom: 24px; left: 50%;
@@ -385,6 +456,12 @@
       <div class="dz-title">Drop your photo here</div>
       <div class="dz-sub">or <span>browse files</span> &bull; JPG / PNG / WEBP</div>
     </div>
+
+    <!-- Camera option -->
+    <div class="or-divider">or</div>
+    <button class="camera-btn" onclick="openCamera()">
+      📸 Take Photo with Camera
+    </button>
 
     <div class="preview-area" id="previewArea">
       <img id="previewImg" src="" alt="preview">
@@ -437,6 +514,20 @@
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeEmailModal()">Cancel</button>
       <button class="btn-send"   onclick="sendEmail()">Send Photos →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Camera modal -->
+<div class="cam-backdrop" id="camBackdrop">
+  <div class="cam-box">
+    <h3>📸 Take a Selfie</h3>
+    <video class="cam-video" id="camVideo" autoplay playsinline muted></video>
+    <canvas class="cam-canvas" id="camCanvas"></canvas>
+    <p class="cam-error" id="camError">⚠ Camera not available. Please allow camera access or use file upload.</p>
+    <div class="cam-actions">
+      <button class="cam-capture" onclick="capturePhoto()">📸 Capture</button>
+      <button class="cam-close"   onclick="closeCamera()">✕ Close</button>
     </div>
   </div>
 </div>
@@ -649,6 +740,57 @@
     } else {
       toast('❌ ' + (data.error || 'Failed to send email.'));
     }
+  }
+
+  // ── Camera ────────────────────────────────────────────────────────────────
+  let camStream = null;
+
+  async function openCamera() {
+    const backdrop = document.getElementById('camBackdrop');
+    const video    = document.getElementById('camVideo');
+    const errEl    = document.getElementById('camError');
+    errEl.classList.remove('show');
+    backdrop.classList.add('show');
+
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      video.srcObject = camStream;
+    } catch (err) {
+      errEl.classList.add('show');
+      errEl.textContent = '⚠ Camera access denied or not available. Please allow camera permission and try again.';
+    }
+  }
+
+  function capturePhoto() {
+    const video  = document.getElementById('camVideo');
+    const canvas = document.getElementById('camCanvas');
+    if (!camStream || !video.srcObject) return;
+
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1); // mirror to match preview
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob(blob => {
+      const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+      closeCamera();
+      handleFile(file);
+      toast('📸 Photo captured!');
+    }, 'image/jpeg', 0.92);
+  }
+
+  function closeCamera() {
+    if (camStream) {
+      camStream.getTracks().forEach(t => t.stop());
+      camStream = null;
+    }
+    document.getElementById('camVideo').srcObject = null;
+    document.getElementById('camBackdrop').classList.remove('show');
   }
 
   // ── Toast ─────────────────────────────────────────────────────────────────
