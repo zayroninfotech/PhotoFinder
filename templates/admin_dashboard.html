@@ -260,6 +260,12 @@
       background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
       color: #0a0e1f;
     }
+    .btn-print {
+      background: rgba(59,130,246,.15);
+      border: 1px solid rgba(59,130,246,.35) !important;
+      color: #93c5fd;
+    }
+    .btn-print:hover { background: rgba(59,130,246,.25); }
     .btn-copy {
       background: rgba(255,255,255,.06);
       border: 1px solid var(--border) !important;
@@ -479,9 +485,12 @@
 
     <!-- Action buttons (hidden by default) -->
     <div class="qr-actions" id="qrActions" style="display:none;">
-      <a id="downloadQrBtn" class="btn-download" download="qrcode.png">
+      <a id="downloadQrBtn" class="btn-download" href="#">
         ⬇ Download QR Code
       </a>
+      <button class="btn-print" onclick="printQR()">
+        🖨 Print QR Code
+      </button>
       <button class="btn-copy" onclick="copyUrl()">
         🔗 Copy User Link
       </button>
@@ -607,7 +616,7 @@
     // Actions
     const actions = document.getElementById('qrActions');
     actions.style.display = 'flex';
-    document.getElementById('downloadQrBtn').href = `/qr/${eventId}`;
+    document.getElementById('downloadQrBtn').href = `/qr/${eventId}/download`;
 
     document.getElementById('statusBar').style.display = 'flex';
   }
@@ -686,6 +695,36 @@
     navigator.clipboard.writeText(currentUserUrl).then(() => {
       toast('✅ User link copied!', '#22c55e');
     });
+  }
+
+  function printQR() {
+    if (!currentEventId) return;
+    const name = document.querySelector(`[data-id="${currentEventId}"] .event-name`)?.textContent || 'Event';
+    const url  = currentUserUrl || '';
+    const win  = window.open('', '_blank', 'width=500,height=600');
+    win.document.write(`
+      <!DOCTYPE html><html><head><title>QR – ${name}</title>
+      <style>
+        body { font-family: 'Segoe UI', sans-serif; text-align: center;
+               padding: 40px; background: #fff; color: #0f172a; }
+        h2   { font-size: 1.4rem; margin-bottom: 6px; }
+        p    { font-size: .8rem; color: #64748b; word-break: break-all; margin-bottom: 20px; }
+        img  { width: 280px; height: 280px; border: 1px solid #e2e8f0;
+               border-radius: 12px; padding: 12px; }
+        small { display:block; margin-top:16px; font-size:.7rem; color:#94a3b8; }
+        @media print { button { display:none; } }
+      </style></head><body>
+      <h2>${name}</h2>
+      <p>${url}</p>
+      <img src="/qr/${currentEventId}" alt="QR Code">
+      <small>Scan to find your photos • Powered by Zayron Infotech PhotoFinder</small>
+      <br><br>
+      <button onclick="window.print()" style="padding:10px 24px;background:#f59e0b;
+        border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.9rem;">
+        🖨 Print Now
+      </button>
+      </body></html>`);
+    win.document.close();
   }
 </script>
 </body>

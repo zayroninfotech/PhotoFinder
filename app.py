@@ -459,6 +459,20 @@ def serve_qr(event_id):
     return send_file(str(p), mimetype="image/png")
 
 
+@app.route("/qr/<event_id>/download")
+def download_qr(event_id):
+    """Force-download the QR code PNG."""
+    p = QRS / f"{event_id}.png"
+    if not p.exists():
+        return "QR not found", 404
+    meta = load_json(EVENTS / event_id / "meta.json")
+    name = meta.get("name", event_id)
+    safe = re.sub(r"[^\w\s-]", "", name).strip().replace(" ", "_") or event_id
+    return send_file(str(p), mimetype="image/png",
+                     as_attachment=True,
+                     download_name=f"QR_{safe}.png")
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  User routes
 # ══════════════════════════════════════════════════════════════════════════════
