@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ event.name }} – Zayron Infotech PhotoFinder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #f8fafc;
+      --surface: #ffffff;
+      --border:  #e2e8f0;
+      --purple:  #b45309;
+      --purple2: #f59e0b;
+      --blue:    #1e3a8a;
+      --green:   #16a34a;
+      --red:     #dc2626;
+      --text:    #0f172a;
+      --muted:   #64748b;
+      --gold:    #f59e0b;
+      --navy:    #07091a;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #07091a 0%, #0f1630 60%, #1a2240 100%);
+      border-bottom: 2px solid rgba(245,158,11,0.3);
+      padding: 18px 24px 22px;
+      text-align: center;
+      color: #fff;
+      position: relative;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 80px; height: 2px;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      border-radius: 2px;
+    }
+    .header-logo {
+      width: 52px; height: 52px;
+      object-fit: contain;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 3px 14px rgba(245,158,11,0.5));
+    }
+    .header-company {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; }
+    header p  { font-size: .85rem; color: #94a3b8; margin-top: 4px; }
+
+    /* ── Status banner ───────────────────────── */
+    .status-banner {
+      background: #fef3c7;
+      border-bottom: 1px solid #fde68a;
+      color: #92400e;
+      padding: 10px 20px;
+      text-align: center;
+      font-size: .85rem;
+      display: none;
+    }
+    .status-banner.show { display: block; }
+    .status-banner.error { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+    .status-banner.ready { background: #dcfce7; border-color: #bbf7d0; color: #14532d; }
+
+    /* ── Content wrapper ─────────────────────── */
+    .content {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 28px 16px 80px;
+    }
+
+    /* ── Upload card ─────────────────────────── */
+    .upload-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px 24px;
+      margin-bottom: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.05);
+    }
+    .upload-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .upload-card .sub { font-size: .83rem; color: var(--muted); margin-bottom: 20px; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 14px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--purple);
+      background: rgba(124,58,237,.04);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+    }
+    .drop-zone .dz-icon { font-size: 40px; margin-bottom: 10px; }
+    .drop-zone .dz-title { font-size: .95rem; font-weight: 600; color: #334155; }
+    .drop-zone .dz-sub   { font-size: .8rem; color: var(--muted); margin-top: 4px; }
+    .drop-zone .dz-sub span {
+      color: var(--purple);
+      font-weight: 600;
+      text-decoration: underline;
+    }
+
+    /* Preview after file selection */
+    .preview-area {
+      display: none;
+      align-items: center;
+      gap: 16px;
+      padding: 12px;
+      background: rgba(124,58,237,.06);
+      border: 1px solid rgba(124,58,237,.2);
+      border-radius: 12px;
+      margin-top: 14px;
+    }
+    .preview-area.show { display: flex; }
+    .preview-area img {
+      width: 64px; height: 64px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+    .preview-info { flex: 1; }
+    .preview-info .pname { font-size: .88rem; font-weight: 600; word-break: break-all; }
+    .preview-info .psize { font-size: .76rem; color: var(--muted); }
+    .preview-clear {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 18px; line-height: 1;
+    }
+
+    .find-btn {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
+      border: none; border-radius: 12px;
+      color: #0a0e1f; font-size: 1rem; font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      margin-top: 16px;
+    }
+    .find-btn:hover  { opacity: .88; }
+    .find-btn:active { transform: scale(.98); }
+    .find-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Loading overlay ─────────────────────── */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 32px;
+    }
+    .loading.show { display: block; }
+    .loader {
+      width: 48px; height: 48px;
+      border: 4px solid rgba(124,58,237,.15);
+      border-top-color: var(--purple);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { color: var(--muted); font-size: .88rem; }
+
+    /* ── Error ───────────────────────────────── */
+    .error-box {
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: .85rem;
+      margin-top: 16px;
+      display: none;
+    }
+    .error-box.show { display: block; }
+
+    /* ── Results ─────────────────────────────── */
+    .results-section { display: none; }
+    .results-section.show { display: block; }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .results-header h3 { font-size: 1.05rem; font-weight: 700; }
+    .results-count {
+      background: rgba(124,58,237,.1);
+      color: var(--purple);
+      font-size: .78rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .photo-card {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: #e2e8f0;
+      cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .photo-card:hover { transform: scale(1.03); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+    .photo-card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .photo-card .photo-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,.5);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .photo-card:hover .photo-overlay { opacity: 1; }
+    .photo-card .photo-overlay span {
+      color: #fff; font-size: 28px;
+    }
+
+    /* ── Action row ──────────────────────────── */
+    .action-row {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn-action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px;
+      border-radius: 12px;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity .2s, transform .1s;
+      text-decoration: none;
+    }
+    .btn-action:active { transform: scale(.98); }
+    .btn-dl   { background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24); color: #0a0e1f; font-weight: 700; }
+    .btn-mail { background: var(--surface); border: 1px solid var(--border) !important; color: var(--text); }
+    .btn-mail:hover { background: var(--bg); }
+
+    /* Email modal */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .modal-backdrop.show { opacity: 1; pointer-events: all; }
+    .modal {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 400px;
+      margin: 16px;
+      transform: translateY(20px);
+      transition: transform .3s;
+    }
+    .modal-backdrop.show .modal { transform: translateY(0); }
+    .modal h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .modal p  { font-size: .83rem; color: var(--muted); margin-bottom: 18px; }
+    .modal input {
+      width: 100%; padding: 11px 14px;
+      border: 1px solid var(--border); border-radius: 10px;
+      font-size: .9rem; outline: none;
+      transition: border-color .2s;
+      margin-bottom: 12px;
+    }
+    .modal input:focus { border-color: var(--purple); }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btns button {
+      flex: 1; padding: 11px; border-radius: 10px;
+      font-size: .88rem; font-weight: 600; cursor: pointer; border: none;
+      transition: opacity .2s;
+    }
+    .modal-btns .btn-send {
+      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24); color: #0a0e1f; font-weight: 700;
+    }
+    .modal-btns .btn-cancel { background: #f1f5f9; color: var(--text); }
+    .modal-btns button:hover { opacity: .85; }
+
+    /* lightbox */
+    .lightbox {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.92);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 300;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .lightbox.show { opacity: 1; pointer-events: all; }
+    .lightbox img {
+      max-width: 92vw; max-height: 88vh;
+      border-radius: 12px;
+      object-fit: contain;
+    }
+    .lightbox-close {
+      position: absolute; top: 20px; right: 20px;
+      background: rgba(255,255,255,.15);
+      border: none; color: #fff; font-size: 22px;
+      width: 42px; height: 42px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .lightbox-close:hover { background: rgba(255,255,255,.25); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e293b; color: #f1f5f9;
+      padding: 11px 22px; border-radius: 30px;
+      font-size: .85rem; font-weight: 500;
+      box-shadow: 0 6px 24px rgba(0,0,0,.3);
+      opacity: 0; pointer-events: none;
+      transition: all .3s; white-space: nowrap;
+      z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="/static/logo.png" alt="Zayron Infotech" class="header-logo">
+  <div class="header-company">Zayron Infotech Pvt. Ltd.</div>
+  <h1>{{ event.name }}</h1>
+  <p>Upload your selfie to find all your photos from this event</p>
+</header>
+
+<!-- Status banner (shown while processing) -->
+<div class="status-banner" id="statusBanner">
+  ⏳ Photos are still being processed. You can upload your selfie, but results may be incomplete.
+</div>
+
+<div class="content">
+
+  <!-- Upload card -->
+  <div class="upload-card">
+    <h2>🤳 Upload Your Selfie</h2>
+    <p class="sub">A clear front-facing photo works best. We'll match it against all event photos.</p>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*" onchange="handleFile(this.files[0])">
+      <div class="dz-icon">📷</div>
+      <div class="dz-title">Drop your photo here</div>
+      <div class="dz-sub">or <span>browse files</span> &bull; JPG / PNG / WEBP</div>
+    </div>
+
+    <div class="preview-area" id="previewArea">
+      <img id="previewImg" src="" alt="preview">
+      <div class="preview-info">
+        <div class="pname" id="previewName"></div>
+        <div class="psize" id="previewSize"></div>
+      </div>
+      <button class="preview-clear" onclick="clearFile()" title="Remove">✕</button>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <button class="find-btn" id="findBtn" onclick="findPhotos()">
+      🔍 Find My Photos
+    </button>
+
+    <div class="loading" id="loadingArea">
+      <div class="loader"></div>
+      <p>Analysing your photo…<br>Comparing with event photos…</p>
+    </div>
+  </div>
+
+  <!-- Results section -->
+  <div class="results-section" id="resultsSection">
+    <div class="results-header">
+      <h3>📸 Your Photos Found</h3>
+      <span class="results-count" id="resultsCount">0 photos</span>
+    </div>
+
+    <div class="photos-grid" id="photosGrid"></div>
+
+    <div class="action-row">
+      <a id="downloadAllBtn" class="btn-action btn-dl" href="#" download>
+        ⬇ Download All Photos (ZIP)
+      </a>
+      <button class="btn-action btn-mail" onclick="openEmailModal()">
+        ✉ Send to My Email
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Email modal -->
+<div class="modal-backdrop" id="emailModal" onclick="closeEmailModal(event)">
+  <div class="modal">
+    <h3>✉ Send Photos by Email</h3>
+    <p>We'll send all your matched photos as a ZIP file to your inbox.</p>
+    <input type="email" id="emailInput" placeholder="your@email.com" maxlength="120">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeEmailModal()">Cancel</button>
+      <button class="btn-send"   onclick="sendEmail()">Send Photos →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- Footer -->
+<footer style="text-align:center;padding:28px 16px;border-top:1px solid #e2e8f0;margin-top:20px;">
+  <img src="/static/logo.png" alt="Zayron Infotech" style="width:32px;height:32px;object-fit:contain;vertical-align:middle;margin-right:8px;filter:drop-shadow(0 2px 6px rgba(245,158,11,0.3));">
+  <span style="font-size:.8rem;color:#94a3b8;vertical-align:middle;">
+    Powered by <strong style="color:#64748b;">Zayron Infotech Pvt. Ltd.</strong>
+  </span>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const EVENT_ID  = "{{ event.id }}";
+  let   selectedFile = null;
+  let   sessionId    = null;
+  let   matchedPhotos = [];
+
+  // ── Event status check ────────────────────────────────────────────────────
+  async function checkEventStatus() {
+    try {
+      const r = await fetch(`/event/${EVENT_ID}/status`);
+      const d = await r.json();
+      const banner = document.getElementById('statusBanner');
+      if (d.overall !== 'ready') {
+        banner.classList.add('show');
+        if (d.overall === 'error') {
+          banner.classList.add('error');
+          banner.textContent = '❌ Event processing failed. Contact admin.';
+        }
+      } else {
+        banner.classList.remove('show');
+      }
+    } catch {}
+  }
+  checkEventStatus();
+
+  // ── Drag & drop ───────────────────────────────────────────────────────────
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  function handleFile(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showError('Please select an image file (JPG, PNG, WEBP).');
+      return;
+    }
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('previewImg').src   = e.target.result;
+      document.getElementById('previewName').textContent = file.name;
+      document.getElementById('previewSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+      document.getElementById('previewArea').classList.add('show');
+    };
+    reader.readAsDataURL(file);
+    hideError();
+    // Reset results
+    hideResults();
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('previewArea').classList.remove('show');
+    document.getElementById('previewImg').src = '';
+    hideResults();
+    hideError();
+  }
+
+  // ── Find photos ───────────────────────────────────────────────────────────
+  async function findPhotos() {
+    if (!selectedFile) {
+      showError('Please select a selfie photo first.');
+      return;
+    }
+
+    const btn = document.getElementById('findBtn');
+    btn.disabled = true;
+    document.getElementById('loadingArea').classList.add('show');
+    hideError();
+    hideResults();
+
+    const fd = new FormData();
+    fd.append('photo', selectedFile);
+    fd.append('event_id', EVENT_ID);
+
+    try {
+      const resp = await fetch(`/event/${EVENT_ID}/upload`, { method: 'POST', body: fd });
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        showError(data.error || 'Something went wrong. Please try again.');
+        return;
+      }
+
+      sessionId     = data.session_id;
+      matchedPhotos = data.photos;
+      showResults(data);
+    } catch (e) {
+      showError('Network error. Please check your connection.');
+    } finally {
+      btn.disabled = false;
+      document.getElementById('loadingArea').classList.remove('show');
+    }
+  }
+
+  function showResults(data) {
+    const section = document.getElementById('resultsSection');
+    const grid    = document.getElementById('photosGrid');
+    const count   = document.getElementById('resultsCount');
+    const dlBtn   = document.getElementById('downloadAllBtn');
+
+    count.textContent = `${data.match_count} photo${data.match_count !== 1 ? 's' : ''} found`;
+    dlBtn.href = `/download/${data.session_id}`;
+
+    grid.innerHTML = '';
+    data.photos.forEach((ph, i) => {
+      const card = document.createElement('div');
+      card.className = 'photo-card';
+      card.innerHTML = `
+        <img src="${ph.url}" alt="${ph.filename}" loading="lazy">
+        <div class="photo-overlay"><span>🔍</span></div>
+      `;
+      card.onclick = () => openLightbox(ph.url);
+      grid.appendChild(card);
+    });
+
+    section.classList.add('show');
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toast(`✅ Found ${data.match_count} matching photo(s)!`);
+  }
+
+  function hideResults() {
+    document.getElementById('resultsSection').classList.remove('show');
+    document.getElementById('photosGrid').innerHTML = '';
+    sessionId = null;
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorBox');
+    el.textContent = '⚠ ' + msg;
+    el.classList.add('show');
+  }
+  function hideError() {
+    document.getElementById('errorBox').classList.remove('show');
+  }
+
+  // ── Lightbox ──────────────────────────────────────────────────────────────
+  function openLightbox(url) {
+    document.getElementById('lightboxImg').src = url;
+    document.getElementById('lightbox').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  // ── Email modal ───────────────────────────────────────────────────────────
+  function openEmailModal() {
+    if (!sessionId) { toast('No results to send.'); return; }
+    document.getElementById('emailModal').classList.add('show');
+    document.getElementById('emailInput').focus();
+  }
+  function closeEmailModal(e) {
+    if (!e || e.target === document.getElementById('emailModal')) {
+      document.getElementById('emailModal').classList.remove('show');
+    }
+  }
+
+  async function sendEmail() {
+    const email = document.getElementById('emailInput').value.trim();
+    if (!email || !email.includes('@')) {
+      toast('⚠ Enter a valid email address.');
+      return;
+    }
+    const btn = document.querySelector('.btn-send');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    const resp = await fetch('/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, session_id: sessionId }),
+    });
+    const data = await resp.json();
+
+    btn.disabled = false;
+    btn.textContent = 'Send Photos →';
+
+    if (resp.ok) {
+      closeEmailModal();
+      toast(`✅ Photos sent to ${email}!`);
+    } else {
+      toast('❌ ' + (data.error || 'Failed to send email.'));
+    }
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3500);
+  }
+</script>
+</body>
+</html>

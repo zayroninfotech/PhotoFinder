@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard – Zayron Infotech PhotoFinder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #07091a;
+      --surface: #0f1630;
+      --border:  rgba(245,158,11,0.1);
+      --blue:    #f59e0b;
+      --purple:  #fbbf24;
+      --green:   #22c55e;
+      --red:     #ef4444;
+      --amber:   #f59e0b;
+      --navy:    #1e3a8a;
+      --text:    #f1f5f9;
+      --muted:   #64748b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-brand { display: flex; align-items: center; gap: 12px; }
+    .header-brand .logo-img {
+      width: 38px; height: 38px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 8px rgba(245,158,11,0.4));
+    }
+    .header-brand .brand-text h1 {
+      font-size: .95rem; font-weight: 800; color: #f1f5f9; line-height: 1.1;
+    }
+    .header-brand .brand-text h1 em {
+      font-style: normal;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-brand .brand-text span { color: var(--muted); font-size: .72rem; }
+
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .logout-btn {
+      padding: 7px 16px;
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.25);
+      color: #fca5a5;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,.22); }
+
+    /* ── Main layout ─────────────────────────── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 0;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* ── Left panel ──────────────────────────── */
+    .left-panel {
+      padding: 32px;
+      border-right: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* Create Event Form */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .form-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 20px; }
+
+    .form-row { margin-bottom: 16px; }
+    .form-row label {
+      display: block;
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 6px;
+    }
+    .form-row input {
+      width: 100%;
+      padding: 11px 14px;
+      background: rgba(15,23,42,0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: .9rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .form-row input:focus { border-color: var(--blue); }
+    .form-row input::placeholder { color: #334155; }
+
+    .submit-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
+      border: none;
+      border-radius: 10px;
+      color: #0a0e1f;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      margin-top: 4px;
+    }
+    .submit-btn:hover   { opacity: .88; }
+    .submit-btn:active  { transform: scale(.98); }
+    .submit-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* Events list */
+    .events-list { display: flex; flex-direction: column; gap: 12px; }
+    .event-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .event-item:hover { border-color: rgba(59,130,246,.3); background: #1a2640; }
+    .event-item.active { border-color: var(--blue); background: rgba(59,130,246,.06); }
+
+    .event-icon {
+      width: 40px; height: 40px; min-width: 40px;
+      border-radius: 10px;
+      background: rgba(59,130,246,.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .event-info { flex: 1; min-width: 0; }
+    .event-name { font-size: .9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-meta { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+
+    .badge {
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+    }
+    .badge-green  { background: rgba(34,197,94,.15);  color: #4ade80; }
+    .badge-amber  { background: rgba(245,158,11,.15); color: #fcd34d; }
+    .badge-red    { background: rgba(239,68,68,.15);  color: #fca5a5; }
+    .badge-blue   { background: rgba(59,130,246,.15); color: #93c5fd; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+    .empty-state .ei { font-size: 40px; margin-bottom: 10px; }
+
+    /* ── Right panel – QR area ───────────────── */
+    .right-panel {
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .qr-placeholder {
+      background: var(--surface);
+      border: 2px dashed rgba(255,255,255,0.08);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 380px;
+      gap: 12px;
+      color: var(--muted);
+      text-align: center;
+      padding: 24px;
+      transition: border-color .3s;
+    }
+    .qr-placeholder.has-qr { border-style: solid; border-color: rgba(59,130,246,.3); }
+    .qr-placeholder .ph-icon { font-size: 56px; opacity: .4; }
+    .qr-placeholder p { font-size: .85rem; max-width: 200px; line-height: 1.5; }
+
+    .qr-frame {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      display: inline-block;
+    }
+    .qr-frame img { display: block; width: 240px; height: 240px; }
+
+    .qr-event-name {
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: center;
+    }
+    .qr-url {
+      font-size: .72rem;
+      color: var(--muted);
+      text-align: center;
+      word-break: break-all;
+      padding: 0 12px;
+    }
+
+    .qr-actions { display: flex; flex-direction: column; gap: 10px; }
+    .qr-actions a, .qr-actions button {
+      display: block;
+      width: 100%;
+      padding: 11px;
+      border-radius: 10px;
+      font-size: .88rem;
+      font-weight: 600;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: opacity .2s, transform .1s;
+    }
+    .qr-actions a:active, .qr-actions button:active { transform: scale(.98); }
+
+    .btn-download {
+      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
+      color: #0a0e1f;
+    }
+    .btn-copy {
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border) !important;
+      color: var(--text);
+    }
+    .btn-copy:hover { background: rgba(255,255,255,.1); }
+
+    .status-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: .82rem;
+    }
+    .status-bar .spin {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(59,130,246,.3);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-msg { flex: 1; color: #94a3b8; }
+    .status-count { color: var(--blue); font-weight: 600; }
+
+    /* Tabs */
+    .tab-row { display: flex; gap: 8px; }
+    .tab-btn {
+      flex: 1; padding: 8px 12px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: .82rem; font-weight: 600;
+      cursor: pointer; transition: all .2s;
+    }
+    .tab-btn.active {
+      background: rgba(59,130,246,.15);
+      border-color: rgba(59,130,246,.4);
+      color: #93c5fd;
+    }
+
+    /* File drop zone */
+    .file-drop {
+      border: 2px dashed rgba(255,255,255,.1);
+      border-radius: 10px;
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .file-drop:hover { border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.04); }
+    .fd-icon { font-size: 28px; margin-bottom: 6px; }
+    .fd-text { font-size: .85rem; font-weight: 600; color: #94a3b8; }
+    .fd-sub  { font-size: .73rem; color: var(--muted); margin-top: 3px; }
+
+    /* Progress bar for uploads */
+    .upload-progress {
+      display: none;
+      background: rgba(255,255,255,.06);
+      border-radius: 6px;
+      height: 6px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .upload-progress.show { display: block; }
+    .upload-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--purple));
+      width: 0%;
+      transition: width .3s;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      background: #1e293b;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-size: .85rem;
+      color: var(--text);
+      box-shadow: 0 8px 30px rgba(0,0,0,.4);
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all .3s;
+      z-index: 999;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 1fr; }
+      .left-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="header-brand">
+    <img src="/static/logo.png" alt="Zayron Infotech" class="logo-img">
+    <div class="brand-text">
+      <h1>Zayron Infotech <em>Pvt. Ltd.</em></h1>
+      <span>PhotoFinder &mdash; Admin Dashboard</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <a href="/admin/logout" class="logout-btn">Sign Out</a>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ── LEFT PANEL ─────────────────────────────── -->
+  <div class="left-panel">
+
+    <!-- Create new event form -->
+    <p class="section-title">Create New Event</p>
+    <div class="form-card">
+      <h2>📁 New Event</h2>
+
+      <!-- Tab switcher -->
+      <div class="tab-row">
+        <button class="tab-btn active" id="tabDrive" onclick="switchTab('drive')">
+          ☁ Google Drive
+        </button>
+        <button class="tab-btn" id="tabFiles" onclick="switchTab('files')">
+          📤 Upload Photos
+        </button>
+      </div>
+
+      <div class="form-row" style="margin-top:16px;">
+        <label>Event Name</label>
+        <input type="text" id="eventName" placeholder="e.g. Annual Day 2024" maxlength="80">
+      </div>
+
+      <!-- Drive tab -->
+      <div id="driveTab">
+        <div class="form-row">
+          <label>Google Drive Folder Link</label>
+          <input type="text" id="driveLink"
+                 placeholder="https://drive.google.com/drive/folders/…">
+        </div>
+        <p style="font-size:.73rem;color:#64748b;margin-bottom:14px;">
+          ⚠ Folder must be set to <strong>"Anyone with the link"</strong> can view.
+        </p>
+      </div>
+
+      <!-- Upload tab -->
+      <div id="filesTab" style="display:none;">
+        <div class="form-row">
+          <label>Select Photos (multiple)</label>
+          <div class="file-drop" id="fileDrop" onclick="document.getElementById('photoFiles').click()">
+            <input type="file" id="photoFiles" accept="image/*" multiple
+                   style="display:none" onchange="handlePhotoSelect(this.files)">
+            <div class="fd-icon">🖼</div>
+            <div class="fd-text">Click or drag photos here</div>
+            <div class="fd-sub" id="fileCountLabel">JPG / PNG / WEBP — no limit</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submitBtn" onclick="submitEvent()">
+        Generate QR Code →
+      </button>
+    </div>
+
+    <!-- Events list -->
+    <p class="section-title">Previous Events</p>
+    <div class="events-list" id="eventsList">
+      {% if events %}
+        {% for ev in events %}
+        <div class="event-item" data-id="{{ ev.id }}" onclick="selectEvent('{{ ev.id }}','{{ ev.name }}','{{ ev.status }}')">
+          <div class="event-icon">📂</div>
+          <div class="event-info">
+            <div class="event-name">{{ ev.name }}</div>
+            <div class="event-meta">{{ ev.photo_count }} photos &bull; /event/{{ ev.id }}</div>
+          </div>
+          <span class="badge {% if ev.status == 'ready' %}badge-green{% elif ev.status == 'error' %}badge-red{% else %}badge-amber{% endif %}">
+            {{ ev.status }}
+          </span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <div class="ei">📂</div>
+          <p>No events yet.<br>Create one above.</p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div><!-- /left-panel -->
+
+  <!-- ── RIGHT PANEL ────────────────────────────── -->
+  <div class="right-panel">
+
+    <p class="section-title">QR Code</p>
+
+    <!-- QR placeholder / display -->
+    <div class="qr-placeholder" id="qrArea">
+      <div class="ph-icon">🔲</div>
+      <p>Create an event on the left to generate a QR code here.</p>
+    </div>
+
+    <!-- Status bar (hidden by default) -->
+    <div class="status-bar" id="statusBar" style="display:none;">
+      <div class="spin" id="spinIcon"></div>
+      <span class="status-msg" id="statusMsg">Processing…</span>
+      <span class="status-count" id="statusCount"></span>
+    </div>
+
+    <!-- Action buttons (hidden by default) -->
+    <div class="qr-actions" id="qrActions" style="display:none;">
+      <a id="downloadQrBtn" class="btn-download" download="qrcode.png">
+        ⬇ Download QR Code
+      </a>
+      <button class="btn-copy" onclick="copyUrl()">
+        🔗 Copy User Link
+      </button>
+    </div>
+
+  </div><!-- /right-panel -->
+
+</div><!-- /main -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentEventId  = null;
+  let currentUserUrl  = null;
+  let statusInterval  = null;
+
+  function toast(msg, color) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.borderColor = color || 'rgba(255,255,255,.1)';
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  let currentTab = 'drive';
+  let selectedFiles = [];
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('driveTab').style.display  = tab === 'drive' ? '' : 'none';
+    document.getElementById('filesTab').style.display  = tab === 'files' ? '' : 'none';
+    document.getElementById('tabDrive').classList.toggle('active', tab === 'drive');
+    document.getElementById('tabFiles').classList.toggle('active', tab === 'files');
+  }
+
+  function handlePhotoSelect(files) {
+    selectedFiles = Array.from(files);
+    document.getElementById('fileCountLabel').textContent =
+      selectedFiles.length + ' photo(s) selected';
+  }
+
+  // Drag-drop onto file zone
+  document.addEventListener('DOMContentLoaded', () => {
+    const drop = document.getElementById('fileDrop');
+    if (!drop) return;
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor='rgba(59,130,246,.6)'; });
+    drop.addEventListener('dragleave', () => drop.style.borderColor = '');
+    drop.addEventListener('drop', e => {
+      e.preventDefault();
+      drop.style.borderColor = '';
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      selectedFiles = files;
+      document.getElementById('fileCountLabel').textContent = files.length + ' photo(s) selected';
+    });
+  });
+
+  async function submitEvent() {
+    const name = document.getElementById('eventName').value.trim();
+    if (!name) { toast('⚠ Please enter an event name.', '#f59e0b'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+
+    const fd = new FormData();
+    fd.append('event_name', name);
+    fd.append('upload_mode', currentTab);
+
+    if (currentTab === 'drive') {
+      const link = document.getElementById('driveLink').value.trim();
+      if (!link) {
+        btn.disabled = false; btn.textContent = 'Generate QR Code →';
+        toast('⚠ Please paste a Drive folder link.', '#f59e0b'); return;
+      }
+      fd.append('drive_link', link);
+    } else {
+      if (selectedFiles.length === 0) {
+        btn.disabled = false; btn.textContent = 'Generate QR Code →';
+        toast('⚠ Please select at least one photo.', '#f59e0b'); return;
+      }
+      btn.textContent = `Uploading ${selectedFiles.length} photo(s)…`;
+      selectedFiles.forEach(f => fd.append('photos', f));
+    }
+
+    let resp, data;
+    try {
+      resp = await fetch('/admin/submit', { method: 'POST', body: fd });
+      data = await resp.json();
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Generate QR Code →';
+      toast('❌ Network error', '#ef4444'); return;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Generate QR Code →';
+
+    if (!resp.ok) { toast('❌ ' + (data.error || 'Failed'), '#ef4444'); return; }
+
+    currentEventId = data.event_id;
+    currentUserUrl = data.user_url;
+    showQR(data.event_id, name, data.user_url);
+    startStatusPoll(data.event_id);
+    addEventToList(data.event_id, name);
+
+    document.getElementById('eventName').value = '';
+    document.getElementById('driveLink').value = '';
+    selectedFiles = [];
+    document.getElementById('fileCountLabel').textContent = 'JPG / PNG / WEBP — no limit';
+    toast('✅ QR generated! Processing photos in background…', '#22c55e');
+  }
+
+  function showQR(eventId, name, userUrl) {
+    const area = document.getElementById('qrArea');
+    area.classList.add('has-qr');
+    area.innerHTML = `
+      <div class="qr-frame">
+        <img src="/qr/${eventId}" alt="QR Code">
+      </div>
+      <div class="qr-event-name">${name}</div>
+      <div class="qr-url">${userUrl}</div>
+    `;
+
+    // Actions
+    const actions = document.getElementById('qrActions');
+    actions.style.display = 'flex';
+    document.getElementById('downloadQrBtn').href = `/qr/${eventId}`;
+
+    document.getElementById('statusBar').style.display = 'flex';
+  }
+
+  function startStatusPoll(eventId) {
+    clearInterval(statusInterval);
+    statusInterval = setInterval(async () => {
+      const r = await fetch(`/admin/status/${eventId}`);
+      const d = await r.json();
+      const msgEl   = document.getElementById('statusMsg');
+      const countEl = document.getElementById('statusCount');
+      const spin    = document.getElementById('spinIcon');
+
+      msgEl.textContent   = d.message || d.state || '';
+      countEl.textContent = d.photo_count ? `${d.photo_count} photos` : '';
+
+      if (d.overall === 'ready') {
+        spin.style.borderTopColor = '#22c55e';
+        clearInterval(statusInterval);
+        // Update badge in list
+        const item = document.querySelector(`[data-id="${eventId}"] .badge`);
+        if (item) { item.className = 'badge badge-green'; item.textContent = 'ready'; }
+        toast(`✅ ${d.photo_count} photos indexed and ready!`, '#22c55e');
+      } else if (d.overall === 'error') {
+        spin.style.borderTopColor = '#ef4444';
+        clearInterval(statusInterval);
+        toast('❌ Processing error: ' + d.message, '#ef4444');
+      }
+    }, 3000);
+  }
+
+  function selectEvent(id, name, status) {
+    // Highlight
+    document.querySelectorAll('.event-item').forEach(el => el.classList.remove('active'));
+    document.querySelector(`[data-id="${id}"]`)?.classList.add('active');
+
+    currentEventId = id;
+    currentUserUrl = `${location.protocol}//${location.host}/event/${id}`;
+    showQR(id, name, currentUserUrl);
+
+    if (status !== 'ready') {
+      startStatusPoll(id);
+    } else {
+      document.getElementById('statusMsg').textContent = 'Ready – photos indexed';
+      document.getElementById('spinIcon').style.borderTopColor = '#22c55e';
+      document.getElementById('statusBar').style.display = 'flex';
+    }
+  }
+
+  function addEventToList(id, name) {
+    const list = document.getElementById('eventsList');
+    const empty = list.querySelector('.empty-state');
+    if (empty) empty.remove();
+
+    const div = document.createElement('div');
+    div.className = 'event-item active';
+    div.dataset.id = id;
+    div.onclick = () => selectEvent(id, name, 'processing');
+    div.innerHTML = `
+      <div class="event-icon">📂</div>
+      <div class="event-info">
+        <div class="event-name">${name}</div>
+        <div class="event-meta">0 photos &bull; /event/${id}</div>
+      </div>
+      <span class="badge badge-amber">processing</span>
+    `;
+    list.prepend(div);
+
+    document.querySelectorAll('.event-item').forEach(el => {
+      if (el !== div) el.classList.remove('active');
+    });
+  }
+
+  function copyUrl() {
+    if (!currentUserUrl) return;
+    navigator.clipboard.writeText(currentUserUrl).then(() => {
+      toast('✅ User link copied!', '#22c55e');
+    });
+  }
+</script>
+</body>
+</html>
