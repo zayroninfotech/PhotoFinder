@@ -465,7 +465,8 @@ def download_qr(event_id):
     p = QRS / f"{event_id}.png"
     if not p.exists():
         return "QR not found", 404
-    meta = load_json(EVENTS / event_id / "meta.json")
+    meta_path = EVENTS / event_id / "meta.json"
+    meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
     name = meta.get("name", event_id)
     safe = re.sub(r"[^\w\s-]", "", name).strip().replace(" ", "_") or event_id
     return send_file(str(p), mimetype="image/png",
