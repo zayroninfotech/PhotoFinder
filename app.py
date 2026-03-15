@@ -28,13 +28,23 @@ config.EMAIL_SENDER   = os.environ.get("EMAIL_SENDER",   config.EMAIL_SENDER)
 config.EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", config.EMAIL_PASSWORD)
 app_secret = os.environ.get("SECRET_KEY", config.SECRET_KEY)
 
-# ── Try to import deepface (face recognition) ─────────────────────────────────
-try:
-    from deepface import DeepFace
-    FACE_OK = True
-except ImportError:
-    FACE_OK = False
-    print("[WARN] deepface not installed – face matching disabled")
+# DeepFace is imported lazily inside find_matches() to avoid loading
+# TensorFlow at startup (prevents OOM crash on free-tier hosting)
+DeepFace = None
+FACE_OK   = False
+
+def _load_deepface():
+    global DeepFace, FACE_OK
+    if DeepFace is not None:
+        return FACE_OK
+    try:
+        from deepface import DeepFace as _DF
+        DeepFace = _DF
+        FACE_OK  = True
+    except Exception as e:
+        print(f"[WARN] deepface unavailable: {e}")
+        FACE_OK = False
+    return FACE_OK
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -162,7 +172,7 @@ def build_encodings(event_dir: Path, status_path: Path):
     _set_status(status_path, "indexing",
                 f"Indexing {len(imgs)} image(s) for face recognition…")
 
-    if FACE_OK:
+    if _load_deepface():
         try:
             # Build DeepFace representation DB
             DeepFace.find(
@@ -173,7 +183,7 @@ def build_encodings(event_dir: Path, status_path: Path):
                 enforce_detection=False,
                 silent=True,
             )
-        except Exception as e:
+        except Exception:
             # First call may "fail" if no face in first image – still builds DB
             pass
 
@@ -201,8 +211,8 @@ def process_event_bg(event_id: str):
 
 
 def find_matches(selfie_path: Path, images_dir: Path) -> list[dict]:
-    if not FACE_OK:
-        # return all images as demo when deepface missing
+    if not _load_deepface():
+        # return all images as demo when deepface unavailable
         return [{"path": str(p), "filename": p.name, "distance": 0.0}
                 for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS]
 
