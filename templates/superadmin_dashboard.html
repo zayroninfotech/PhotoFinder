@@ -113,41 +113,67 @@
     .days-warn { color:#f59e0b; }
     .days-out  { color:#ef4444; }
 
-    /* Action buttons */
-    .actions { display:flex; gap:6px; flex-wrap:wrap; }
-    .act-btn {
-      padding:5px 11px; border-radius:7px; font-size:.72rem;
-      font-weight:600; border:1px solid; cursor:pointer;
-      transition:background .15s, opacity .15s;
-      background:transparent; font-family:inherit;
+    /* Action dropdown menu */
+    .act-menu-wrap { position:relative; display:inline-block; }
+    .act-menu-btn {
+      padding:5px 12px; border-radius:7px; font-size:.76rem;
+      font-weight:700; border:1px solid rgba(59,130,246,.3);
+      color:#60a5fa; background:rgba(59,130,246,.07);
+      cursor:pointer; font-family:inherit; white-space:nowrap;
+      transition:background .15s;
     }
-    .act-btn:hover { opacity:.8; }
-    .btn-activate  { border-color:rgba(34,197,94,.4);  color:#22c55e; }
-    .btn-activate:hover  { background:rgba(34,197,94,.1); }
-    .btn-deactivate{ border-color:rgba(239,68,68,.4);  color:#ef4444; }
-    .btn-deactivate:hover{ background:rgba(239,68,68,.1); }
-    .btn-extend    { border-color:rgba(59,130,246,.4); color:#60a5fa; }
-    .btn-extend:hover    { background:rgba(59,130,246,.1); }
-    .btn-delete    { border-color:rgba(100,116,139,.3); color:#64748b; }
-    .btn-delete:hover    { background:rgba(100,116,139,.08); }
+    .act-menu-btn:hover { background:rgba(59,130,246,.14); }
+    .act-menu-dropdown {
+      display:none; position:absolute; right:0; top:calc(100% + 5px);
+      background:#0d1628; border:1px solid rgba(59,130,246,.2);
+      border-radius:10px; min-width:170px; z-index:50;
+      box-shadow:0 8px 32px rgba(0,0,0,.6); overflow:hidden;
+    }
+    .act-menu-wrap.open .act-menu-dropdown { display:block; }
+    .act-menu-item {
+      display:flex; align-items:center; gap:8px;
+      padding:9px 14px; font-size:.78rem; font-weight:600;
+      cursor:pointer; color:var(--sub); border:none;
+      background:transparent; width:100%; font-family:inherit;
+      text-align:left; transition:background .12s, color .12s;
+    }
+    .act-menu-item:hover { background:rgba(59,130,246,.08); color:var(--text); }
+    .act-item-activate  { color:#22c55e; }
+    .act-item-activate:hover  { background:rgba(34,197,94,.08)!important; color:#4ade80!important; }
+    .act-item-deactivate{ color:#94a3b8; }
+    .act-item-deactivate:hover{ background:rgba(100,116,139,.08)!important; }
+    .act-item-extend    { color:#60a5fa; }
+    .act-item-extend:hover    { background:rgba(59,130,246,.08)!important; color:#93c5fd!important; }
+    .act-item-logout    { color:#f59e0b; }
+    .act-item-logout:hover    { background:rgba(245,158,11,.08)!important; color:#fbbf24!important; }
+    .act-item-delete    { color:#f87171; }
+    .act-item-delete:hover    { background:rgba(239,68,68,.08)!important; color:#fca5a5!important; }
+    .act-menu-divider { height:1px; background:rgba(59,130,246,.1); margin:4px 0; }
 
-    /* Status dropdown */
-    .status-select {
-      appearance: none; -webkit-appearance: none;
-      padding: 4px 28px 4px 10px;
-      border-radius: 7px; border: 1.5px solid rgba(59,130,246,.3);
-      background: rgba(59,130,246,.07) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2360a5fa'/%3E%3C/svg%3E") no-repeat right 8px center;
-      color: #60a5fa; font-size: .74rem; font-weight: 700;
-      cursor: pointer; font-family: inherit;
-      transition: border-color .2s, background-color .2s;
-      min-width: 96px;
+    /* Expandable events row */
+    .ev-subrow { display:none; }
+    .ev-subrow.open { display:table-row; }
+    .ev-subrow td { padding:0; }
+    .ev-subrow-inner {
+      background:#050810; border-top:2px solid rgba(59,130,246,.12);
+      padding:14px 20px;
     }
-    .status-select:focus { outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,.25); }
-    .status-select option { background: #080c18; color: #e8eeff; }
-    .sel-active   { border-color:rgba(34,197,94,.45); color:#22c55e;
-                    background-color:rgba(34,197,94,.07); }
-    .sel-inactive { border-color:rgba(100,116,139,.35); color:#94a3b8;
-                    background-color:rgba(100,116,139,.07); }
+    .ev-subtable { width:100%; border-collapse:collapse; font-size:.78rem; }
+    .ev-subtable th {
+      color:var(--muted); font-size:.65rem; font-weight:700; letter-spacing:.07em;
+      text-transform:uppercase; padding:6px 12px; text-align:left;
+      background:transparent; border-bottom:1px solid rgba(59,130,246,.08);
+    }
+    .ev-subtable td { padding:8px 12px; color:var(--sub); border-bottom:1px solid rgba(59,130,246,.04); vertical-align:middle; }
+    .ev-subtable tr:last-child td { border-bottom:none; }
+    .ev-count-btn {
+      background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.2);
+      color:#60a5fa; border-radius:6px; padding:2px 9px;
+      font-size:.72rem; font-weight:700; cursor:pointer; font-family:inherit;
+      transition:background .15s;
+    }
+    .ev-count-btn:hover { background:rgba(59,130,246,.2); }
+    .ev-count-zero { color:var(--muted); font-size:.78rem; }
 
     /* Events grid */
     .events-grid {
@@ -517,24 +543,25 @@
           <tr>
             <th>User</th>
             <th>Company</th>
-            <th>Plan</th>
             <th>Status</th>
-            <th>Subscription End</th>
+            <th>Plan / Expires</th>
             <th>Days Left</th>
-            <th>Payment</th>
+            <th>Events</th>
+            <th>Last Event</th>
             <th>Registered</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for uid, u in users.items() %}
+          {# ── User row ── #}
           <tr id="row-{{ uid }}">
             <td>
               <div class="user-name">{{ u.username }}</div>
               <div class="user-email">{{ u.email }}</div>
+              <div style="font-size:.68rem;color:var(--muted);margin-top:2px;">{{ u.phone or '' }}</div>
             </td>
             <td><span class="company">{{ u.company }}</span></td>
-            <td>{{ u.plan_label }}</td>
             <td>
               {% if u.is_sub_active %}
                 <span class="badge badge-active">● Active</span>
@@ -546,7 +573,10 @@
                 <span class="badge badge-expired">✗ Expired</span>
               {% endif %}
             </td>
-            <td>{{ u.subscription_end or '—' }}</td>
+            <td>
+              <div style="font-size:.78rem;color:var(--sub);">{{ u.plan_label }}</div>
+              <div style="font-size:.72rem;color:var(--muted);">{{ u.subscription_end or '—' }}</div>
+            </td>
             <td>
               {% if u.is_sub_active %}
                 <span class="days-left {% if u.days_remaining <= 7 %}days-warn{% else %}days-ok{% endif %}">
@@ -559,26 +589,98 @@
               {% endif %}
             </td>
             <td>
-              {% if u.payment_status == 'paid' %}
-                <span style="color:#22c55e; font-weight:700; font-size:.75rem;">✓ Paid</span>
+              {% if u.event_count > 0 %}
+                <button class="ev-count-btn" onclick="toggleEvents('{{ uid }}')">
+                  {{ u.event_count }} event{% if u.event_count != 1 %}s{% endif %} ▾
+                </button>
               {% else %}
-                <span style="color:#f59e0b; font-size:.75rem;">Pending</span>
+                <span class="ev-count-zero">0</span>
               {% endif %}
             </td>
-            <td style="font-size:.75rem; color:var(--muted);">
-              {{ u.created_at[:10] if u.created_at else '—' }}
-            </td>
+            <td style="font-size:.75rem;color:var(--muted);">{{ u.last_event }}</td>
+            <td style="font-size:.75rem;color:var(--muted);">{{ u.created_at[:10] if u.created_at else '—' }}</td>
             <td>
-              <div class="actions">
-                <select class="status-select {% if u.is_sub_active %}sel-active{% else %}sel-inactive{% endif %}"
-                        onchange="setUserStatus('{{ uid }}', this.value, '{{ u.username }}', this)">
-                  <option value="active"   {% if u.is_sub_active %}selected{% endif %}>● Active</option>
-                  <option value="inactive" {% if not u.is_sub_active %}selected{% endif %}>○ Inactive</option>
-                </select>
-                <button class="act-btn btn-extend"
-                        onclick="openExtend('{{ uid }}', '{{ u.username }}')">Extend</button>
-                <button class="act-btn btn-delete"
-                        onclick="deleteUser('{{ uid }}', '{{ u.username }}')">Delete</button>
+              <div class="act-menu-wrap" id="menu-{{ uid }}">
+                <button class="act-menu-btn" onclick="toggleMenu('{{ uid }}')">⚙ Actions ▾</button>
+                <div class="act-menu-dropdown">
+                  <button class="act-menu-item act-item-activate"
+                          onclick="setUserStatus('{{ uid }}','active','{{ u.username }}');closeMenus()">
+                    ● Activate
+                  </button>
+                  <button class="act-menu-item act-item-deactivate"
+                          onclick="setUserStatus('{{ uid }}','inactive','{{ u.username }}');closeMenus()">
+                    ○ Deactivate
+                  </button>
+                  <div class="act-menu-divider"></div>
+                  <button class="act-menu-item act-item-extend"
+                          onclick="openExtend('{{ uid }}','{{ u.username }}');closeMenus()">
+                    ➕ Extend Days
+                  </button>
+                  <div class="act-menu-divider"></div>
+                  <button class="act-menu-item act-item-logout"
+                          onclick="forceLogout('{{ uid }}','{{ u.username }}');closeMenus()">
+                    🚪 Force Logout
+                  </button>
+                  <div class="act-menu-divider"></div>
+                  <button class="act-menu-item act-item-delete"
+                          onclick="deleteUser('{{ uid }}','{{ u.username }}');closeMenus()">
+                    🗑 Delete User
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {# ── Expandable events subrow ── #}
+          <tr class="ev-subrow" id="evrow-{{ uid }}">
+            <td colspan="9">
+              <div class="ev-subrow-inner">
+                <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">
+                  📸 Events by {{ u.username }}
+                </div>
+                {% set user_events = all_events | selectattr('owner_id','equalto',uid) | list %}
+                {% if user_events %}
+                <table class="ev-subtable">
+                  <thead>
+                    <tr>
+                      <th>Event Name</th>
+                      <th>Photos</th>
+                      <th>Status</th>
+                      <th>Created</th>
+                      <th>User Link</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for ev in user_events %}
+                    <tr>
+                      <td style="color:var(--text);font-weight:600;">{{ ev.name }}</td>
+                      <td>{{ ev.photo_count or 0 }}</td>
+                      <td>
+                        {% if ev.status == 'ready' %}
+                          <span style="color:#22c55e;font-weight:700;">✓ Ready</span>
+                        {% elif ev.status == 'processing' %}
+                          <span style="color:#f59e0b;font-weight:700;">⏳ Processing</span>
+                        {% else %}
+                          <span style="color:#ef4444;font-weight:700;">✗ {{ ev.status }}</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ ev.created_at[:10] if ev.created_at else '—' }}</td>
+                      <td>
+                        <a href="{{ ev.user_url }}" target="_blank"
+                           style="color:#60a5fa;font-size:.72rem;font-family:monospace;text-decoration:none;">
+                          {{ ev.user_url }}
+                        </a>
+                        <button onclick="copyLink('{{ ev.user_url }}',this)"
+                                style="margin-left:6px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);
+                                       color:#60a5fa;border-radius:5px;padding:2px 8px;font-size:.65rem;
+                                       font-weight:700;cursor:pointer;font-family:inherit;">Copy</button>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+                {% else %}
+                <div style="color:var(--muted);font-size:.8rem;">No events yet.</div>
+                {% endif %}
               </div>
             </td>
           </tr>
@@ -870,8 +972,34 @@
 
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-  // ── Set Status (Active / Inactive dropdown) ─────────────────────────────────
-  function setUserStatus(uid, value, name, selectEl) {
+  // ── Actions dropdown menu ────────────────────────────────────────────────────
+  function toggleMenu(uid) {
+    const wrap = document.getElementById('menu-' + uid);
+    const isOpen = wrap.classList.contains('open');
+    closeMenus();
+    if (!isOpen) wrap.classList.add('open');
+  }
+  function closeMenus() {
+    document.querySelectorAll('.act-menu-wrap.open').forEach(el => el.classList.remove('open'));
+  }
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.act-menu-wrap')) closeMenus();
+  });
+
+  // ── Expand / collapse user events ────────────────────────────────────────────
+  function toggleEvents(uid) {
+    const row = document.getElementById('evrow-' + uid);
+    if (!row) return;
+    row.classList.toggle('open');
+    // update button arrow
+    const btn = document.querySelector(`#row-${uid} .ev-count-btn`);
+    if (btn) btn.textContent = btn.textContent.includes('▾')
+      ? btn.textContent.replace('▾','▴')
+      : btn.textContent.replace('▴','▾');
+  }
+
+  // ── Set Status ───────────────────────────────────────────────────────────────
+  function setUserStatus(uid, value, name) {
     const isActive = value === 'active';
     fetch(`/superadmin/set-status/${uid}`, {
       method: 'POST',
@@ -879,31 +1007,27 @@
       body: JSON.stringify({active: isActive})
     }).then(r => r.json()).then(d => {
       if (d.ok) {
-        showToast(isActive ? `✅ ${name} set to Active` : `⏸ ${name} set to Inactive`);
-        // Update dropdown colour class
-        selectEl.className = 'status-select ' + (isActive ? 'sel-active' : 'sel-inactive');
-        // Update status badge in the same row
-        const row = selectEl.closest('tr');
+        showToast(isActive ? `✅ ${name} activated` : `⏸ ${name} deactivated`);
+        const row = document.getElementById('row-' + uid);
         if (row) {
           const badge = row.querySelector('.badge');
           if (badge) {
-            if (isActive) {
-              badge.className = 'badge badge-active'; badge.textContent = '● Active';
-            } else {
-              badge.className = 'badge badge-inactive'; badge.textContent = '○ Inactive';
-            }
+            if (isActive) { badge.className='badge badge-active'; badge.textContent='● Active'; }
+            else { badge.className='badge badge-inactive'; badge.textContent='○ Inactive'; }
           }
         }
-      } else {
-        showToast('Error: ' + (d.error||'unknown'), false);
-        // Revert dropdown
-        selectEl.value = isActive ? 'inactive' : 'active';
-        selectEl.className = 'status-select ' + (isActive ? 'sel-inactive' : 'sel-active');
-      }
-    }).catch(() => {
-      showToast('Network error', false);
-      selectEl.value = isActive ? 'inactive' : 'active';
-    });
+      } else { showToast('Error: ' + (d.error||'unknown'), false); }
+    }).catch(() => showToast('Network error', false));
+  }
+
+  // ── Force Logout ─────────────────────────────────────────────────────────────
+  function forceLogout(uid, name) {
+    if (!confirm(`Force logout "${name}"?\nThey will be signed out immediately on their next request.`)) return;
+    fetch(`/superadmin/force-logout/${uid}`, {method:'POST'})
+      .then(r => r.json()).then(d => {
+        if (d.ok) showToast(`🚪 ${name} has been force-logged out`);
+        else showToast('Error: ' + (d.error||'unknown'), false);
+      }).catch(() => showToast('Network error', false));
   }
 
   // ── Extend ──────────────────────────────────────────────────────────────────
@@ -1003,7 +1127,7 @@
     }).then(r=>r.json()).then(d=>{
       btn.textContent='Create User'; btn.disabled=false;
       if (d.ok) {
-        showToast(`✅ User "${username}" created! Use Activate to set subscription.`);
+        showToast(`✅ User "${username}" created successfully!`);
         closeCU();
         setTimeout(()=>location.reload(), 1200);
       } else {
@@ -1162,11 +1286,16 @@
 
   // ── Delete ──────────────────────────────────────────────────────────────────
   function deleteUser(uid, name) {
-    if (!confirm(`⚠️ Permanently delete user "${name}"?\nAll their data will remain but they cannot log in.`)) return;
+    if (!confirm(`⚠️ Permanently delete user "${name}"?\nThey will lose all access. Events remain.`)) return;
     fetch(`/superadmin/delete-user/${uid}`, {method:'POST'})
       .then(r=>r.json()).then(d => {
-        if (d.ok) { showToast(`🗑 ${name} deleted`); document.getElementById(`row-${uid}`).remove(); }
-        else showToast('Error: '+(d.error||'unknown'), false);
+        if (d.ok) {
+          showToast(`🗑 ${name} deleted`);
+          const row    = document.getElementById(`row-${uid}`);
+          const evrow  = document.getElementById(`evrow-${uid}`);
+          if (row)   row.remove();
+          if (evrow) evrow.remove();
+        } else showToast('Error: '+(d.error||'unknown'), false);
       });
   }
 </script>

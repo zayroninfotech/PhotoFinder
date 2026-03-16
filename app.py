@@ -299,6 +299,11 @@ def _admin_required(f):
                 if not user or not is_subscription_active(user):
                     session.clear()
                     return redirect(url_for("admin_login", expired=1))
+                # Force-logout check
+                if user.get("force_logout"):
+                    update_user(uid, {"force_logout": False})
+                    session.clear()
+                    return redirect(url_for("admin_login"))
         return f(*args, **kwargs)
     return wrapper
 
@@ -515,6 +520,9 @@ def admin_login():
                 elif not is_subscription_active(user):
                     error = "❌ Your subscription has expired. Please contact the administrator to renew."
                 else:
+                    # Clear any force-logout flag on fresh login
+                    if user.get("force_logout"):
+                        update_user(uid, {"force_logout": False})
                     session.clear()
                     session["admin"]        = True
                     session["is_superadmin"] = False
@@ -794,12 +802,28 @@ def superadmin_dashboard():
             if d.is_dir():
                 m = _load_meta(d / "meta.json")
                 if m:
-                    # Resolve owner name
                     oid = m.get("owner_id", "")
                     owner_user = users.get(oid)
                     m["owner_name"] = owner_user["username"] if owner_user else (
                         "Superadmin" if oid == "superadmin" else oid)
                     all_events.append(m)
+
+    # Per-user event counts and last event date
+    event_stats = {}   # uid -> {"count": N, "last": "YYYY-MM-DD"}
+    for ev in all_events:
+        oid = ev.get("owner_id", "")
+        if oid not in event_stats:
+            event_stats[oid] = {"count": 0, "last": ""}
+        event_stats[oid]["count"] += 1
+        ev_date = (ev.get("created_at") or "")[:10]
+        if ev_date > event_stats[oid]["last"]:
+            event_stats[oid]["last"] = ev_date
+
+    # Inject event stats into each user
+    for uid, u in users.items():
+        stats = event_stats.get(uid, {"count": 0, "last": "—"})
+        u["event_count"] = stats["count"]
+        u["last_event"]  = stats["last"] or "—"
 
     return render_template("superadmin_dashboard.html",
                            users=users, all_events=all_events,
@@ -888,6 +912,17 @@ def superadmin_extend(user_id):
 @_superadmin_required
 def superadmin_delete_user(user_id):
     delete_user(user_id)
+    return jsonify({"ok": True})
+
+
+@app.route("/superadmin/force-logout/<user_id>", methods=["POST"])
+@_superadmin_required
+def superadmin_force_logout(user_id):
+    """Set force_logout flag — user is kicked out on their next request."""
+    users = load_users()
+    if user_id not in users:
+        return jsonify({"error": "User not found"}), 404
+    update_user(user_id, {"force_logout": True})
     return jsonify({"ok": True})
 
 
