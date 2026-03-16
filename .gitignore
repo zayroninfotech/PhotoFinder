@@ -1,8 +1,28 @@
+# Python
 venv/
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+
+# Environment & secrets
 .env
+.env.*
+
+# App data (local only)
 data/
 *.pkl
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Claude local files
+.claude/
