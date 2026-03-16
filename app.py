@@ -54,9 +54,15 @@ def _get_db():
         # Create unique index on username once
         _mongo_db["users"].create_index("username", unique=True, background=True)
         _mongo_db["users"].create_index("id",       unique=True, background=True)
-        print(f"[INFO] MongoDB connected → {uri}  db={db_name}")
+        try:
+            print(f"[INFO] MongoDB connected -> {uri}  db={db_name}")
+        except Exception:
+            pass  # ignore console encoding errors on Windows
     except Exception as e:
-        print(f"[WARN] MongoDB unavailable ({e}); falling back to JSON")
+        try:
+            print(f"[WARN] MongoDB unavailable; falling back to JSON")
+        except Exception:
+            pass
         _mongo_db = None
     return _mongo_db
 
