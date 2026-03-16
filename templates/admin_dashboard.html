@@ -441,8 +441,15 @@
     {% elif dr > 0 %}
     <span class="sub-chip sub-chip-warn">⚠ Expiring soon &nbsp; <span class="sub-days-number">{{ dr }}</span> days left</span>
     {% else %}
-    <span class="sub-chip sub-chip-expire">✗ Expired — Contact admin to renew</span>
+    <span class="sub-chip sub-chip-expire">✗ Expired</span>
     {% endif %}
+    <!-- Always-visible Renew/Upgrade button -->
+    <button onclick="openPlanModal(true)"
+      style="padding:6px 14px; background:linear-gradient(135deg,#b45309,#f59e0b);
+             border:none; border-radius:8px; color:#0a0e1f; font-size:.75rem;
+             font-weight:800; cursor:pointer; letter-spacing:.3px; white-space:nowrap;">
+      💳 Renew Plan
+    </button>
   </div>
 </div>
 {% endif %}
@@ -883,15 +890,20 @@
   var _subActive     = {{ 'true' if sub_active else 'false' }};
   var _rzpKey        = "{{ rzp_key or '' }}";
 
-  // Override submitEvent to check subscription first
-  const _origSubmit = submitEvent;
-  submitEvent = function() {
-    if (!_subActive) {
-      openPlanModal(false);   // renewal mode
-    } else {
-      _origSubmit();
+  // Patch the Generate QR button to check subscription first
+  document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('submitBtn');
+    if (btn) {
+      btn.removeAttribute('onclick');
+      btn.addEventListener('click', function() {
+        if (!_subActive) {
+          openPlanModal(false);  // expired → show payment popup
+        } else {
+          submitEvent();         // active → generate QR directly
+        }
+      });
     }
-  };
+  });
 
   function openPlanModal(isVoluntary) {
     const modal = document.getElementById('planModal');
