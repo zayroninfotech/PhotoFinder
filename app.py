@@ -1431,6 +1431,22 @@ def upload_selfie(event_id):
     except Exception as e:
         return jsonify({"error": f"Could not read image: {e}"}), 400
 
+    # Validate that uploaded image actually contains a face
+    if _load_deepface():
+        try:
+            faces = DeepFace.extract_faces(
+                img_path=str(selfie_path),
+                detector_backend=config.FACE_DETECTOR,
+                enforce_detection=True,
+                align=True
+            )
+            if not faces:
+                selfie_path.unlink(missing_ok=True)
+                return jsonify({"error": "❌ No face detected in your photo. Please upload a clear selfie with your face visible."}), 400
+        except Exception:
+            selfie_path.unlink(missing_ok=True)
+            return jsonify({"error": "❌ No face detected in your photo. Please upload a clear selfie with your face visible."}), 400
+
     matches = find_matches(selfie_path, images_dir)
     if not matches:
         selfie_path.unlink(missing_ok=True)
