@@ -4,7 +4,7 @@
 
 # Admin credentials  (Superadmin)
 ADMIN_USERNAME = "vamsi"
-ADMIN_PASSWORD = "zayron@2026"
+ADMIN_PASSWORD = "Zayron@2026"
 
 # Flask secret key  (change this to something random)
 SECRET_KEY = "change-this-secret-key-xyz-2024"
