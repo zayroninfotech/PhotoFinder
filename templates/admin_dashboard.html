@@ -790,6 +790,271 @@
       </body></html>`);
     win.document.close();
   }
+
+  /* ─────────────────────────────────────────────────────
+     Subscription / Plan popup  (injected via JS block)
+  ───────────────────────────────────────────────────── */
+</script>
+
+<!-- ── Razorpay CDN ── -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<!-- ── Plan Renewal Popup ── -->
+<div id="planModal" style="display:none; position:fixed; inset:0; z-index:9000;
+     background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
+     align-items:center; justify-content:center;">
+  <div style="background:#0f1630; border:1px solid rgba(245,158,11,.25);
+              border-radius:20px; padding:36px 32px; max-width:620px; width:94%;
+              max-height:90vh; overflow-y:auto; position:relative;
+              box-shadow:0 32px 80px rgba(0,0,0,.7);">
+
+    <!-- Close -->
+    <button onclick="closePlanModal()"
+      style="position:absolute;top:14px;right:16px;background:none;border:none;
+             color:#64748b;font-size:22px;cursor:pointer;line-height:1;">✕</button>
+
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:32px;margin-bottom:8px;">💳</div>
+      <h2 style="color:#f1f5f9;font-size:1.25rem;margin-bottom:4px;" id="planModalTitle">
+        Renew Subscription
+      </h2>
+      <p style="color:#64748b;font-size:.85rem;" id="planModalSub">
+        Choose a plan to continue generating QR codes
+      </p>
+    </div>
+
+    <!-- Plan cards grid -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:24px;" id="planGrid">
+      {% for p in plans %}
+      <div class="plan-card-pay" data-days="{{ p.days }}" data-price="{{ p.price }}"
+           onclick="selectPlan(this, {{ p.days }}, '{{ p.price }}', '{{ p.label }}')"
+           style="border:2px solid rgba(245,158,11,.18); border-radius:14px; padding:18px 12px;
+                  text-align:center; cursor:pointer; transition:all .2s;
+                  background:rgba(255,255,255,.03);">
+        <div style="font-size:1.4rem;font-weight:800;color:#f59e0b;">{{ p.days }}</div>
+        <div style="font-size:.7rem;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">
+          Day{% if p.days > 1 %}s{% endif %}
+        </div>
+        <div style="font-size:.72rem;color:#64748b;margin-bottom:8px;">{{ p.tag }}</div>
+        <div style="font-size:1rem;font-weight:700;color:#f1f5f9;">{{ p.price }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Selected summary -->
+    <div id="planSummary" style="display:none; background:rgba(245,158,11,.08);
+         border:1px solid rgba(245,158,11,.25); border-radius:12px;
+         padding:14px 18px; margin-bottom:18px; text-align:center;">
+      <span style="color:#94a3b8;font-size:.85rem;">Selected: </span>
+      <strong id="planSummaryText" style="color:#f59e0b;"></strong>
+    </div>
+
+    <!-- Pay button -->
+    <button id="payNowBtn" onclick="initiatePayment()" disabled
+      style="width:100%;padding:15px;background:linear-gradient(135deg,#f59e0b,#d97706);
+             border:none;border-radius:12px;color:#000;font-size:1rem;font-weight:800;
+             cursor:pointer;opacity:.4;transition:opacity .2s,transform .15s;letter-spacing:.3px;">
+      💳 Pay &amp; Activate
+    </button>
+
+    <!-- Payment history link -->
+    <div style="text-align:center;margin-top:16px;">
+      <a href="#" onclick="showPaymentHistory();return false;"
+         style="font-size:.78rem;color:#475569;text-decoration:none;">
+        📋 View payment history
+      </a>
+    </div>
+
+    <!-- Payment history panel -->
+    <div id="payHistoryPanel" style="display:none;margin-top:16px;">
+      <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:14px;">
+        <p style="color:#64748b;font-size:.78rem;margin-bottom:10px;">Recent Payments</p>
+        <div id="payHistoryList" style="font-size:.8rem;color:#94a3b8;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Plan popup state ─────────────────────────────────────────────────
+  var _selectedDays  = 0;
+  var _selectedPrice = '';
+  var _selectedLabel = '';
+  var _subActive     = {{ 'true' if sub_active else 'false' }};
+  var _rzpKey        = "{{ rzp_key or '' }}";
+
+  // Override submitEvent to check subscription first
+  const _origSubmit = submitEvent;
+  submitEvent = function() {
+    if (!_subActive) {
+      openPlanModal(false);   // renewal mode
+    } else {
+      _origSubmit();
+    }
+  };
+
+  function openPlanModal(isVoluntary) {
+    const modal = document.getElementById('planModal');
+    if (!isVoluntary) {
+      document.getElementById('planModalTitle').textContent = '⚠ Subscription Expired';
+      document.getElementById('planModalSub').textContent   =
+        'Your subscription has expired. Renew to generate QR codes.';
+    } else {
+      document.getElementById('planModalTitle').textContent = '💳 Renew / Upgrade Plan';
+      document.getElementById('planModalSub').textContent   =
+        'Choose a plan to extend your subscription';
+    }
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePlanModal() {
+    document.getElementById('planModal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  // Close on backdrop click
+  document.getElementById('planModal').addEventListener('click', function(e) {
+    if (e.target === this) closePlanModal();
+  });
+
+  function selectPlan(el, days, price, label) {
+    document.querySelectorAll('.plan-card-pay').forEach(c => {
+      c.style.borderColor  = 'rgba(245,158,11,.18)';
+      c.style.background   = 'rgba(255,255,255,.03)';
+      c.style.transform    = '';
+    });
+    el.style.borderColor = '#f59e0b';
+    el.style.background  = 'rgba(245,158,11,.1)';
+    el.style.transform   = 'scale(1.04)';
+
+    _selectedDays  = days;
+    _selectedPrice = price;
+    _selectedLabel = label;
+
+    document.getElementById('planSummary').style.display = 'block';
+    document.getElementById('planSummaryText').textContent =
+      label + ' — ' + price;
+
+    const btn = document.getElementById('payNowBtn');
+    btn.disabled     = false;
+    btn.style.opacity = '1';
+    btn.textContent  = '💳 Pay ' + price + ' & Activate';
+  }
+
+  async function initiatePayment() {
+    if (!_selectedDays) { return; }
+
+    if (!_rzpKey) {
+      toast('⚠ Payment gateway not configured. Contact admin.', '#ef4444');
+      return;
+    }
+
+    const btn = document.getElementById('payNowBtn');
+    btn.disabled    = true;
+    btn.textContent = 'Creating order…';
+
+    let orderData;
+    try {
+      const res = await fetch('/admin/create-payment-order', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({days: _selectedDays})
+      });
+      orderData = await res.json();
+      if (!res.ok) throw new Error(orderData.error || 'Order creation failed');
+    } catch(e) {
+      toast('❌ ' + e.message, '#ef4444');
+      btn.disabled = false;
+      btn.textContent = '💳 Pay ' + _selectedPrice + ' & Activate';
+      return;
+    }
+
+    // Open Razorpay checkout
+    const rzpOptions = {
+      key:         _rzpKey,
+      amount:      orderData.amount,
+      currency:    'INR',
+      name:        'Zayron Infotech',
+      description: _selectedLabel + ' Subscription',
+      order_id:    orderData.order_id,
+      theme:       { color: '#f59e0b' },
+      handler: async function(response) {
+        // Verify on backend
+        btn.textContent = 'Verifying…';
+        try {
+          const vRes = await fetch('/admin/verify-payment', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+              razorpay_order_id:   response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature:  response.razorpay_signature,
+              days:                _selectedDays,
+            })
+          });
+          const vData = await vRes.json();
+          if (!vRes.ok) throw new Error(vData.error || 'Verification failed');
+
+          // Success
+          _subActive = true;
+          toast('✅ Payment successful! Subscription renewed till ' + vData.new_end, '#22c55e');
+          closePlanModal();
+
+          // Update sub bar in header
+          const chip = document.querySelector('.sub-chip');
+          if (chip) {
+            chip.className  = 'sub-chip sub-chip-ok';
+            chip.textContent = '● Active  ' + vData.days + ' days left';
+          }
+
+          // Now generate QR
+          setTimeout(() => _origSubmit(), 800);
+
+        } catch(e) {
+          toast('❌ ' + e.message, '#ef4444');
+          btn.disabled    = false;
+          btn.textContent = '💳 Pay ' + _selectedPrice + ' & Activate';
+        }
+      },
+      modal: {
+        ondismiss: function() {
+          btn.disabled    = false;
+          btn.textContent = '💳 Pay ' + _selectedPrice + ' & Activate';
+          toast('Payment cancelled.', '#64748b');
+        }
+      }
+    };
+
+    const rzp = new Razorpay(rzpOptions);
+    rzp.open();
+  }
+
+  async function showPaymentHistory() {
+    const panel = document.getElementById('payHistoryPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'none') return;
+
+    const list = document.getElementById('payHistoryList');
+    list.innerHTML = '<em style="color:#475569">Loading…</em>';
+    try {
+      const res  = await fetch('/admin/payment-history');
+      const data = await res.json();
+      if (!data.length) {
+        list.innerHTML = '<em style="color:#475569">No payments found.</em>';
+        return;
+      }
+      list.innerHTML = data.map(p => `
+        <div style="display:flex;justify-content:space-between;padding:8px 0;
+                    border-bottom:1px solid rgba(255,255,255,.05);">
+          <span>${p.plan_label || p.plan_days+'d'} — <strong style="color:#f59e0b">${p.amount}</strong></span>
+          <span style="color:#475569">${p.paid_at ? p.paid_at.slice(0,10) : '—'}</span>
+        </div>
+      `).join('');
+    } catch(e) {
+      list.innerHTML = '<em style="color:#ef4444">Failed to load.</em>';
+    }
+  }
 </script>
 </body>
 </html>

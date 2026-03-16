@@ -5,8 +5,13 @@ Admin       → submits Google Drive link → QR generated
 User        → scans QR → uploads selfie → sees matched photos → download / email
 """
 
-import os, re, io, json, uuid, zipfile, smtplib, threading, shutil
+import os, re, io, json, uuid, zipfile, smtplib, threading, shutil, hmac, hashlib
 from pymongo import MongoClient
+try:
+    import razorpay as _rzp_lib
+    RAZORPAY_AVAILABLE = True
+except ImportError:
+    RAZORPAY_AVAILABLE = False
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from email import encoders
@@ -618,6 +623,156 @@ def admin_logout():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  Razorpay payment routes
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _rzp_client():
+    """Return a Razorpay Client or None if not configured."""
+    key_id     = getattr(config, "RAZORPAY_KEY_ID",     "")
+    key_secret = getattr(config, "RAZORPAY_KEY_SECRET", "")
+    if not RAZORPAY_AVAILABLE or not key_id or not key_secret:
+        return None
+    return _rzp_lib.Client(auth=(key_id, key_secret))
+
+
+@app.route("/admin/create-payment-order", methods=["POST"])
+@_admin_required
+def create_payment_order():
+    """Create a Razorpay order for subscription renewal."""
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.json or {}
+    try:
+        days = int(data.get("days", 30))
+    except Exception:
+        days = 30
+
+    plan = next((p for p in SUBSCRIPTION_PLANS if p["days"] == days), None)
+    if not plan:
+        return jsonify({"error": "Invalid plan selected."}), 400
+
+    # Parse price string e.g. "₹999" → 999 → 99900 paise
+    price_str   = plan["price"].replace("₹", "").replace(",", "").strip()
+    amount_paise = int(float(price_str) * 100)
+
+    client = _rzp_client()
+    if client is None:
+        return jsonify({"error": "Payment gateway not configured. Contact admin."}), 503
+
+    try:
+        order = client.order.create({
+            "amount":          amount_paise,
+            "currency":        "INR",
+            "payment_capture": 1,
+            "notes":           {"user_id": uid, "plan_days": str(days)},
+        })
+        return jsonify({
+            "order_id": order["id"],
+            "amount":   amount_paise,
+            "currency": "INR",
+            "plan":     plan,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/admin/verify-payment", methods=["POST"])
+@_admin_required
+def verify_payment():
+    """Verify Razorpay payment signature, extend subscription, store history."""
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data               = request.json or {}
+    rzp_order_id       = data.get("razorpay_order_id", "")
+    rzp_payment_id     = data.get("razorpay_payment_id", "")
+    rzp_signature      = data.get("razorpay_signature", "")
+    try:
+        days = int(data.get("days", 30))
+    except Exception:
+        days = 30
+
+    # Verify HMAC-SHA256 signature
+    key_secret = getattr(config, "RAZORPAY_KEY_SECRET", "")
+    msg        = f"{rzp_order_id}|{rzp_payment_id}"
+    expected   = hmac.new(key_secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
+    if expected != rzp_signature:
+        return jsonify({"error": "Payment verification failed. Invalid signature."}), 400
+
+    # Extend subscription
+    users = load_users()
+    user  = users.get(uid)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    end_str = user.get("subscription_end")
+    try:
+        base = max(date.fromisoformat(end_str), date.today()) if end_str else date.today()
+    except Exception:
+        base = date.today()
+
+    new_end = base + timedelta(days=days)
+    plan    = next((p for p in SUBSCRIPTION_PLANS if p["days"] == days), {})
+
+    sub_fields = {
+        "subscription_days":  days,
+        "subscription_end":   new_end.isoformat(),
+        "is_active":          True,
+        "payment_status":     "paid",
+    }
+    if not user.get("subscription_start"):
+        sub_fields["subscription_start"] = date.today().isoformat()
+    update_user(uid, sub_fields)
+
+    # Store payment in MongoDB payments collection
+    payment_doc = {
+        "id":           uuid.uuid4().hex[:12],
+        "user_id":      uid,
+        "username":     user.get("username", ""),
+        "order_id":     rzp_order_id,
+        "payment_id":   rzp_payment_id,
+        "plan_days":    days,
+        "plan_label":   plan.get("label", ""),
+        "amount":       plan.get("price", ""),
+        "status":       "success",
+        "paid_at":      datetime.now().isoformat(),
+        "new_sub_end":  new_end.isoformat(),
+    }
+    db = _get_db()
+    if db is not None:
+        try:
+            db["payments"].insert_one({**payment_doc, "_id": payment_doc["id"]})
+        except Exception as e:
+            print(f"[WARN] Payment record save: {e}")
+
+    return jsonify({
+        "ok":      True,
+        "new_end": new_end.isoformat(),
+        "days":    days,
+        "plan":    plan.get("label", ""),
+    })
+
+
+@app.route("/admin/payment-history")
+@_admin_required
+def payment_history():
+    """Return this user's payment history from MongoDB."""
+    uid = session.get("user_id")
+    db  = _get_db()
+    if db is not None:
+        records = list(
+            db["payments"].find({"user_id": uid}, {"_id": 0})
+                          .sort("paid_at", -1).limit(20)
+        )
+    else:
+        records = []
+    return jsonify(records)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  Superadmin routes
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -898,10 +1053,19 @@ def admin_dashboard():
                          "days_remaining": days_remaining(u),
                          "plan_label":     plan_label(u.get("subscription_days", 0))}
 
+    # Pass Razorpay public key to template
+    rzp_key = getattr(config, "RAZORPAY_KEY_ID", "")
+    sub_active = True
+    if user_info:
+        sub_active = is_subscription_active(load_users().get(uid, {}))
+
     return render_template("admin_dashboard.html",
                            events=events,
                            user_info=user_info,
-                           is_superadmin=is_superadmin)
+                           is_superadmin=is_superadmin,
+                           rzp_key=rzp_key,
+                           sub_active=sub_active,
+                           plans=SUBSCRIPTION_PLANS)
 
 
 def _make_qr(event_id: str, user_url: str):
@@ -916,6 +1080,14 @@ def _make_qr(event_id: str, user_url: str):
 @app.route("/admin/submit", methods=["POST"])
 @_admin_required
 def admin_submit():
+    # Block if subscription expired (superadmin bypasses)
+    uid = session.get("user_id")
+    if not session.get("is_superadmin") and uid:
+        user = load_users().get(uid)
+        if not user or not is_subscription_active(user):
+            return jsonify({"error": "subscription_expired",
+                            "message": "Your subscription has expired. Please renew to generate QR codes."}), 403
+
     event_name   = request.form.get("event_name", "Event").strip()
     drive_link   = request.form.get("drive_link", "").strip()
     upload_mode  = request.form.get("upload_mode", "drive")

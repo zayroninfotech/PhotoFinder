@@ -31,3 +31,8 @@ PORT = 5000
 # Atlas:      "mongodb+srv://user:pass@cluster.mongodb.net/"
 MONGODB_URI = "mongodb://localhost:27017/"
 MONGODB_DB  = "photofinder"
+
+# ── Razorpay ──────────────────────────────────────────────────────────────────────────────
+# Sign up at https://razorpay.com  → Settings → API Keys → Generate Test Key
+RAZORPAY_KEY_ID     = ""   # rzp_test_xxxxxxxxxxxx
+RAZORPAY_KEY_SECRET = ""   # your key secret
