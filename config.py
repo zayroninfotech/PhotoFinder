@@ -34,5 +34,5 @@ MONGODB_DB  = "photofinder"
 
 # ── Razorpay ──────────────────────────────────────────────────────────────────────────────
 # Sign up at https://razorpay.com  → Settings → API Keys → Generate Test Key
-RAZORPAY_KEY_ID     = ""   # rzp_test_xxxxxxxxxxxx
-RAZORPAY_KEY_SECRET = ""   # your key secret
+RAZORPAY_KEY_ID     = "rzp_test_SRzQUI8EhzQGZv"
+RAZORPAY_KEY_SECRET = "Cx2hPbtdTw8HTTGWVhDgUtm2"
