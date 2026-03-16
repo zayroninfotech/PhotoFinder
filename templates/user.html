@@ -56,16 +56,22 @@
 
     .hero-content { position: relative; z-index: 2; }
 
-    .hero-logo {
-      width: 64px; height: 64px;
-      object-fit: contain;
+    .hero-logo-wrap {
+      background: #fff;
+      border-radius: 14px;
+      padding: 8px 16px;
+      display: inline-flex; align-items: center; justify-content: center;
       margin-bottom: 14px;
-      filter: drop-shadow(0 4px 20px rgba(245,158,11,.55));
+      box-shadow: 0 4px 24px rgba(245,158,11,.35);
       animation: logo-pulse 3s ease-in-out infinite;
     }
     @keyframes logo-pulse {
-      0%,100% { filter: drop-shadow(0 4px 20px rgba(245,158,11,.55)); }
-      50%      { filter: drop-shadow(0 6px 30px rgba(245,158,11,.9)); }
+      0%,100% { box-shadow: 0 4px 24px rgba(245,158,11,.35); }
+      50%      { box-shadow: 0 6px 36px rgba(245,158,11,.65); }
+    }
+    .hero-logo {
+      height: 52px; width: auto; max-width: 140px;
+      object-fit: contain; display: block;
     }
 
     .hero-company {
@@ -495,7 +501,8 @@
       border-top: 1px solid var(--border); margin-top: 16px;
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
-    .footer img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(245,158,11,.3)); }
+    .footer-logo-wrap { background: #fff; border-radius: 8px; padding: 3px 7px; display: inline-flex; align-items: center; }
+    .footer img { height: 26px; width: auto; max-width: 80px; object-fit: contain; display: block; }
     .footer span { font-size: .8rem; color: #94a3b8; }
     .footer strong { color: #64748b; }
 
@@ -515,6 +522,17 @@
 </head>
 <body>
 
+<!-- ─── Page Loader ─────────────────────────────── -->
+<div id="pgLoader"><div class="pg-spin"></div></div>
+<style>
+  #pgLoader{position:fixed;inset:0;z-index:99999;background:#000010;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,visibility .45s ease;}
+  #pgLoader.done{opacity:0;visibility:hidden;pointer-events:none;}
+  .pg-spin{width:56px;height:56px;border-radius:50%;border:4px solid rgba(255,255,255,0.07);border-top:4px solid #3b82f6;border-right:4px solid #f59e0b;animation:pgSpin .75s linear infinite;}
+  @keyframes pgSpin{to{transform:rotate(360deg);}}
+</style>
+<script>(function(){var L=document.getElementById('pgLoader');function h(){L.classList.add('done');}window.addEventListener('load',h);window.addEventListener('pageshow',function(e){if(e.persisted)h();});setTimeout(h,6000);})();</script>
+
+
 <!-- ══ HERO HEADER ══════════════════════════════════════════ -->
 <div class="hero">
   <div class="hero-orb orb1"></div>
@@ -522,7 +540,9 @@
   <div class="hero-orb orb3"></div>
 
   <div class="hero-content">
-    <img src="/static/logo.png" alt="Zayron Infotech" class="hero-logo">
+    <div class="hero-logo-wrap">
+      <img src="/static/logo.png" alt="Zayron Infotech" class="hero-logo">
+    </div>
     <div class="hero-company">Zayron Infotech Pvt. Ltd.</div>
     <h1 class="hero-event">{{ event.name }}</h1>
     <p class="hero-sub">Your personal photo gallery from this event — found instantly using AI face recognition.</p>
@@ -662,7 +682,7 @@
 
 <!-- ══ FOOTER ════════════════════════════════════════════════ -->
 <div class="footer">
-  <img src="/static/logo.png" alt="Zayron Infotech">
+  <div class="footer-logo-wrap"><img src="/static/logo.png" alt="Zayron Infotech"></div>
   <span>Powered by <strong>Zayron Infotech Pvt. Ltd.</strong></span>
 </div>
 

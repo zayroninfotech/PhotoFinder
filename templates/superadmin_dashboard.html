@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Superadmin – Zayron Infotech</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:     #000000;
+      --panel:  #06090f;
+      --card:   #080c18;
+      --border: rgba(59,130,246,0.1);
+      --gold:   #f59e0b;
+      --blue:   #3b82f6;
+      --muted:  #2a3a55;
+      --text:   #e8eeff;
+      --sub:    #94a3b8;
+    }
+    body { min-height:100vh; font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); }
+
+    /* Header */
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 62px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    header::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:3px;
+      background: linear-gradient(90deg,#1d4ed8,#3b82f6 40%,#f59e0b 70%,#fbbf24 100%);
+    }
+    .header-brand { display:flex; align-items:center; gap:12px; }
+    .logo-wrap { background:#fff; border-radius:9px; padding:4px 8px; display:flex; align-items:center; box-shadow:0 2px 10px rgba(59,130,246,0.2); }
+    .logo-img  { height:34px; width:auto; max-width:90px; object-fit:contain; display:block; }
+    .brand-text h1 { font-size:.9rem; font-weight:800; color:#f0f4ff; }
+    .brand-text h1 em { font-style:normal; background:linear-gradient(90deg,#3b82f6,#f59e0b); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .brand-text span { font-size:.68rem; color:var(--muted); display:block; }
+    .header-right { display:flex; align-items:center; gap:14px; }
+    .badge-superadmin {
+      padding:4px 12px; background:linear-gradient(135deg,#1d4ed8,#3b82f6); border-radius:20px;
+      font-size:.7rem; font-weight:700; color:#fff; letter-spacing:.04em;
+    }
+    .logout-btn {
+      padding:6px 14px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.25);
+      color:#fca5a5; border-radius:8px; font-size:.78rem; font-weight:600;
+      text-decoration:none; transition:background .2s;
+    }
+    .logout-btn:hover { background:rgba(239,68,68,.2); }
+
+    /* Layout */
+    .page { max-width:1400px; margin:0 auto; padding:28px; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap:16px; margin-bottom:28px;
+    }
+    .stat-card {
+      background: var(--card); border:1px solid var(--border); border-radius:14px;
+      padding:18px 20px;
+    }
+    .stat-card .sv { font-size:1.8rem; font-weight:800; line-height:1; margin-bottom:4px; }
+    .stat-card .sl { font-size:.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+    .sv-blue   { color:#3b82f6; }
+    .sv-gold   { color:#f59e0b; }
+    .sv-green  { color:#22c55e; }
+    .sv-red    { color:#ef4444; }
+
+    /* Section title */
+    .sec-title {
+      font-size:.7rem; font-weight:700; letter-spacing:.1em;
+      text-transform:uppercase; color:var(--muted);
+      margin-bottom:16px; display:flex; align-items:center; gap:8px;
+    }
+    .sec-title::after {
+      content:''; flex:1; height:1px;
+      background:linear-gradient(90deg,var(--border),transparent);
+    }
+
+    /* Users table */
+    .users-section { margin-bottom:36px; }
+    .table-wrap { overflow-x:auto; border-radius:14px; border:1px solid var(--border); }
+    table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    th {
+      background:#05080e; color:var(--muted);
+      font-size:.68rem; font-weight:700; letter-spacing:.08em;
+      text-transform:uppercase; padding:12px 16px; text-align:left;
+      border-bottom:1px solid var(--border);
+    }
+    td { padding:13px 16px; border-bottom:1px solid rgba(59,130,246,0.05); color:var(--sub); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(59,130,246,0.03); }
+
+    .user-name  { color:var(--text); font-weight:700; }
+    .user-email { color:var(--muted); font-size:.75rem; }
+    .company    { color:#60a5fa; }
+
+    /* Status badges */
+    .badge {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:3px 10px; border-radius:20px;
+      font-size:.68rem; font-weight:700; letter-spacing:.04em;
+    }
+    .badge-active   { background:rgba(34,197,94,.12);  color:#22c55e; border:1px solid rgba(34,197,94,.2);  }
+    .badge-pending  { background:rgba(245,158,11,.1);  color:#f59e0b; border:1px solid rgba(245,158,11,.2); }
+    .badge-expired  { background:rgba(239,68,68,.1);   color:#ef4444; border:1px solid rgba(239,68,68,.2);  }
+    .badge-inactive { background:rgba(100,116,139,.1); color:#64748b; border:1px solid rgba(100,116,139,.2);}
+
+    .days-left { font-weight:700; }
+    .days-ok   { color:#22c55e; }
+    .days-warn { color:#f59e0b; }
+    .days-out  { color:#ef4444; }
+
+    /* Action buttons */
+    .actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .act-btn {
+      padding:5px 11px; border-radius:7px; font-size:.72rem;
+      font-weight:600; border:1px solid; cursor:pointer;
+      transition:background .15s, opacity .15s;
+      background:transparent; font-family:inherit;
+    }
+    .act-btn:hover { opacity:.8; }
+    .btn-activate  { border-color:rgba(34,197,94,.4);  color:#22c55e; }
+    .btn-activate:hover  { background:rgba(34,197,94,.1); }
+    .btn-deactivate{ border-color:rgba(239,68,68,.4);  color:#ef4444; }
+    .btn-deactivate:hover{ background:rgba(239,68,68,.1); }
+    .btn-extend    { border-color:rgba(59,130,246,.4); color:#60a5fa; }
+    .btn-extend:hover    { background:rgba(59,130,246,.1); }
+    .btn-delete    { border-color:rgba(100,116,139,.3); color:#64748b; }
+    .btn-delete:hover    { background:rgba(100,116,139,.08); }
+
+    /* Events grid */
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 18px;
+    }
+    .ev-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+    .ev-card:hover { border-color: rgba(59,130,246,0.28); }
+
+    /* Top: QR + Info */
+    .ev-card-top {
+      display: flex; gap: 0; align-items: stretch;
+    }
+    .ev-qr-box {
+      flex-shrink: 0; width: 120px;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      padding: 10px;
+      cursor: pointer;
+      position: relative;
+    }
+    .ev-qr-box img { width: 100px; height: 100px; object-fit: contain; display: block; }
+    .ev-qr-box .qr-hover-label {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: .68rem; font-weight: 700;
+      opacity: 0; transition: opacity .2s;
+      border-radius: 0;
+    }
+    .ev-qr-box:hover .qr-hover-label { opacity: 1; }
+
+    .ev-info {
+      flex: 1; padding: 14px 16px;
+      border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .ev-name  { color:var(--text); font-weight:700; font-size:.9rem; margin-bottom:4px; }
+    .ev-owner { color:#60a5fa; font-size:.72rem; margin-bottom:8px; }
+    .ev-meta  { display:flex; flex-direction:column; gap:3px; }
+    .ev-meta-row { display:flex; align-items:center; gap:6px; font-size:.72rem; color:var(--muted); }
+    .ev-meta-row strong { color:var(--sub); }
+
+    .ev-status-ready      { color:#22c55e; font-weight:700; }
+    .ev-status-processing { color:#f59e0b; font-weight:700; }
+    .ev-status-error      { color:#ef4444; font-weight:700; }
+
+    /* Bottom: actions */
+    .ev-card-btns {
+      border-top: 1px solid var(--border);
+      display: flex; gap: 0;
+    }
+    .ev-card-btns a, .ev-card-btns button {
+      flex: 1; padding: 9px 6px;
+      background: transparent; border: none; border-right: 1px solid var(--border);
+      color: var(--muted); font-size: .72rem; font-weight: 600;
+      text-align: center; text-decoration: none; cursor: pointer;
+      transition: background .15s, color .15s;
+      font-family: inherit; display:flex; align-items:center; justify-content:center; gap:4px;
+    }
+    .ev-card-btns a:last-child, .ev-card-btns button:last-child { border-right: none; }
+    .ev-card-btns a:hover, .ev-card-btns button:hover { background: rgba(59,130,246,0.07); color: #60a5fa; }
+
+    /* QR lightbox */
+    .qr-lightbox {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.85); z-index:300;
+      align-items:center; justify-content:center; flex-direction:column; gap:16px;
+    }
+    .qr-lightbox.show { display:flex; }
+    .qr-lightbox img { max-width:320px; max-height:320px; background:#fff; padding:16px; border-radius:12px; }
+    .qr-lightbox-name { color:#f0f4ff; font-size:1rem; font-weight:700; }
+    .qr-lightbox-close {
+      padding:8px 24px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+      color:#fff; border-radius:8px; cursor:pointer; font-size:.84rem; margin-top:4px;
+    }
+
+    /* Empty state */
+    .empty { text-align:center; padding:48px; color:var(--muted); font-size:.88rem; }
+
+    /* Modal */
+    .modal-overlay {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);
+      z-index:200; align-items:center; justify-content:center;
+    }
+    .modal-overlay.show { display:flex; }
+    .modal {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:16px; padding:32px; width:360px; max-width:90vw;
+      position:relative;
+    }
+    .modal h3 { font-size:1rem; font-weight:800; color:var(--text); margin-bottom:8px; }
+    .modal p  { color:var(--muted); font-size:.82rem; margin-bottom:20px; }
+    .modal select, .modal input {
+      width:100%; padding:10px 14px; background:#05080f;
+      border:1px solid var(--border); border-radius:9px;
+      color:var(--text); font-size:.88rem; outline:none; margin-bottom:16px;
+      font-family:inherit;
+    }
+    .modal select:focus, .modal input:focus { border-color:#3b82f6; }
+    .modal-btns { display:flex; gap:10px; }
+    .modal-btns button {
+      flex:1; padding:10px; border-radius:9px; font-size:.88rem;
+      font-weight:700; cursor:pointer; border:none; font-family:inherit;
+    }
+    .btn-confirm {
+      background:linear-gradient(135deg,#1d4ed8,#3b82f6);
+      color:#fff;
+    }
+    .btn-cancel { background:rgba(100,116,139,.15); color:var(--sub); }
+
+    /* Create User modal — wider */
+    #createUserModal .modal { width:520px; }
+    .cu-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; }
+    .cu-grid .cu-full { grid-column:1/-1; }
+    .cu-label {
+      display:block; color:var(--muted); font-size:.68rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:.07em; margin-bottom:5px;
+    }
+    .cu-label .req { color:#f59e0b; }
+    .cu-input {
+      width:100%; padding:9px 12px; background:#05080f;
+      border:1px solid var(--border); border-radius:8px;
+      color:var(--text); font-size:.85rem; outline:none; font-family:inherit;
+      transition:border-color .2s;
+    }
+    .cu-input:focus { border-color:#3b82f6; box-shadow:0 0 0 2px rgba(59,130,246,.12); }
+    .cu-hint { font-size:.65rem; color:#1e2a40; margin-top:3px; }
+    .cu-hint.ok  { color:#22c55e; }
+    .cu-hint.err { color:#ef4444; }
+    .cu-error { color:#fca5a5; font-size:.78rem; margin-bottom:10px; display:none; }
+    .cu-error.show { display:block; }
+
+    /* Toast */
+    .toast {
+      position:fixed; bottom:24px; right:24px;
+      background:#1e293b; border:1px solid var(--border);
+      color:var(--text); padding:12px 20px; border-radius:10px;
+      font-size:.84rem; z-index:999;
+      transform:translateY(80px); opacity:0;
+      transition:transform .3s, opacity .3s;
+    }
+    .toast.show { transform:translateY(0); opacity:1; }
+
+    /* Tabs */
+    .tab-nav {
+      display:flex; gap:4px;
+      background:var(--card); border:1px solid var(--border);
+      border-radius:12px; padding:5px; margin-bottom:24px;
+    }
+    .tab-btn {
+      flex:1; padding:9px 14px;
+      background:transparent; border:none; border-radius:9px;
+      color:var(--muted); font-size:.78rem; font-weight:700;
+      cursor:pointer; font-family:inherit; letter-spacing:.02em;
+      transition:background .2s, color .2s;
+      display:flex; align-items:center; justify-content:center; gap:6px;
+    }
+    .tab-btn:hover { background:rgba(59,130,246,.06); color:var(--sub); }
+    .tab-btn.active {
+      background:rgba(59,130,246,.12);
+      color:#60a5fa;
+      box-shadow:0 0 0 1px rgba(59,130,246,.2);
+    }
+    .tab-btn.active.tab-pay {
+      background:rgba(245,158,11,.1);
+      color:#f59e0b;
+      box-shadow:0 0 0 1px rgba(245,158,11,.2);
+    }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+
+    /* Payment Tab */
+    .pay-tab-layout {
+      display:grid; grid-template-columns:1fr 1fr; gap:20px;
+    }
+    .pay-panel {
+      background:var(--card); border-radius:14px;
+      border:1px solid rgba(245,158,11,0.15);
+      padding:22px;
+    }
+    .pay-panel-title {
+      font-size:.78rem; font-weight:800; color:#f0f4ff;
+      letter-spacing:.04em; text-transform:uppercase;
+      display:flex; align-items:center; gap:7px; margin-bottom:16px;
+      padding-bottom:12px; border-bottom:1px solid rgba(245,158,11,0.1);
+    }
+    .pay-panel-title span { font-size:1rem; }
+    .ps-field { margin-bottom:13px; }
+    .ps-label {
+      display:block; color:var(--muted); font-size:.65rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:.07em; margin-bottom:5px;
+    }
+    .ps-input {
+      width:100%; padding:9px 13px; background:#05080f;
+      border:1px solid var(--border); border-radius:8px;
+      color:var(--text); font-size:.86rem; outline:none; font-family:inherit;
+      transition:border-color .2s;
+    }
+    .ps-input:focus { border-color:#f59e0b; box-shadow:0 0 0 2px rgba(245,158,11,.1); }
+    .ps-textarea { resize:vertical; min-height:68px; }
+
+    /* QR preview box */
+    .qr-gen-row {
+      display:flex; gap:14px; align-items:flex-start; margin-bottom:14px;
+    }
+    .qr-gen-preview {
+      flex-shrink:0; background:#fff; border-radius:10px;
+      width:120px; height:120px; padding:8px;
+      display:flex; align-items:center; justify-content:center;
+      border:2px solid rgba(245,158,11,0.25);
+      box-shadow:0 4px 16px rgba(245,158,11,.12);
+    }
+    .qr-gen-preview img { width:104px; height:104px; object-fit:contain; display:block; }
+    .qr-gen-preview .no-qr-msg {
+      color:#94a3b8; font-size:.65rem; text-align:center; line-height:1.5;
+    }
+    .qr-gen-actions { flex:1; display:flex; flex-direction:column; gap:8px; }
+    .btn-gen-qr {
+      padding:9px 14px;
+      background:linear-gradient(135deg,#b45309,#f59e0b);
+      border:none; border-radius:8px; color:#fff;
+      font-size:.78rem; font-weight:700; cursor:pointer; font-family:inherit;
+      box-shadow:0 2px 10px rgba(245,158,11,.25);
+      transition:opacity .2s; text-align:center;
+    }
+    .btn-gen-qr:hover { opacity:.88; }
+    .btn-gen-qr:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-upload-qr {
+      padding:8px 14px;
+      background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.25);
+      border-radius:8px; color:#60a5fa;
+      font-size:.75rem; font-weight:700; cursor:pointer; font-family:inherit;
+      text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;
+    }
+    .btn-upload-qr input { display:none; }
+    .btn-remove-qr {
+      padding:6px 12px; background:transparent;
+      border:1px solid rgba(239,68,68,.3); color:#f87171;
+      border-radius:7px; font-size:.72rem; font-weight:600; cursor:pointer; font-family:inherit;
+    }
+    .qr-status-txt { font-size:.7rem; color:var(--muted); }
+
+    /* Pay save row */
+    .pay-full-row { margin-top:20px; }
+    .pay-note-card {
+      background:var(--card); border:1px solid rgba(59,130,246,.1);
+      border-radius:14px; padding:22px; margin-bottom:20px;
+    }
+    .ps-save-btn {
+      padding:11px 30px;
+      background:linear-gradient(135deg,#b45309,#f59e0b);
+      border:none; border-radius:9px; color:#fff;
+      font-size:.9rem; font-weight:700; cursor:pointer; font-family:inherit;
+      box-shadow:0 3px 14px rgba(245,158,11,.3); transition:opacity .2s;
+    }
+    .ps-save-btn:hover { opacity:.88; }
+    .ps-status { font-size:.78rem; }
+    .ps-status.ok  { color:#22c55e; }
+    .ps-status.err { color:#ef4444; }
+
+    @media (max-width:900px) {
+      .stats-bar { grid-template-columns:repeat(2,1fr); }
+      .page { padding:16px; }
+      .pay-tab-layout { grid-template-columns:1fr; }
+      .tab-btn { font-size:.72rem; padding:8px 8px; }
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- ─── Page Loader ─────────────────────────────── -->
+<div id="pgLoader"><div class="pg-spin"></div></div>
+<style>
+  #pgLoader{position:fixed;inset:0;z-index:99999;background:#000010;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,visibility .45s ease;}
+  #pgLoader.done{opacity:0;visibility:hidden;pointer-events:none;}
+  .pg-spin{width:56px;height:56px;border-radius:50%;border:4px solid rgba(255,255,255,0.07);border-top:4px solid #3b82f6;border-right:4px solid #f59e0b;animation:pgSpin .75s linear infinite;}
+  @keyframes pgSpin{to{transform:rotate(360deg);}}
+</style>
+<script>(function(){var L=document.getElementById('pgLoader');function h(){L.classList.add('done');}window.addEventListener('load',h);window.addEventListener('pageshow',function(e){if(e.persisted)h();});setTimeout(h,6000);})();</script>
+
+
+<header>
+  <div class="header-brand">
+    <div class="logo-wrap"><img src="/static/logo.png" alt="Zayron" class="logo-img"></div>
+    <div class="brand-text">
+      <h1>Zayron Infotech <em>Pvt. Ltd.</em></h1>
+      <span>PhotoFinder — Superadmin Control Panel</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge-superadmin">⚡ Superadmin</span>
+    <a href="/admin/logout" class="logout-btn">Sign Out</a>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- Stats bar -->
+  {% set total   = users|length %}
+  {% set active  = users.values()|selectattr('is_sub_active')|list|length %}
+  {% set pending = users.values()|selectattr('payment_status','equalto','pending')|list|length %}
+  {% set expired = total - active - pending %}
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="sv sv-blue">{{ total }}</div>
+      <div class="sl">Total Users</div>
+    </div>
+    <div class="stat-card">
+      <div class="sv sv-green">{{ active }}</div>
+      <div class="sl">Active Subscriptions</div>
+    </div>
+    <div class="stat-card">
+      <div class="sv sv-gold">{{ pending }}</div>
+      <div class="sl">Pending Activation</div>
+    </div>
+    <div class="stat-card">
+      <div class="sv sv-blue">{{ all_events|length }}</div>
+      <div class="sl">Total Events</div>
+    </div>
+  </div>
+
+  <!-- Tab navigation -->
+  <div class="tab-nav">
+    <button class="tab-btn active" id="tab-btn-users" onclick="switchTab('users')">
+      👥 Users &amp; Subscriptions
+    </button>
+    <button class="tab-btn" id="tab-btn-events" onclick="switchTab('events')">
+      📸 Events
+    </button>
+    <button class="tab-btn tab-pay" id="tab-btn-payment" onclick="switchTab('payment')">
+      💳 Payment Settings
+    </button>
+  </div>
+
+  <!-- ══ TAB: USERS ══════════════════════════════════════════════════ -->
+  <div class="tab-panel active" id="panel-users">
+  <div class="users-section">
+    <div class="sec-title" style="justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <span style="display:flex;align-items:center;gap:8px;">
+        👥 Registered Users &amp; Subscriptions
+        <span style="font-size:.68rem;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">({{ users|length }} total)</span>
+      </span>
+      <button onclick="document.getElementById('createUserModal').classList.add('show')"
+              style="padding:7px 18px; background:linear-gradient(135deg,#1d4ed8,#3b82f6);
+                     border:none; border-radius:8px; color:#fff; font-size:.78rem;
+                     font-weight:700; cursor:pointer; letter-spacing:.02em; font-family:inherit;
+                     box-shadow:0 2px 12px rgba(59,130,246,.3);">
+        + Create User
+      </button>
+    </div>
+
+    {% if users %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Company</th>
+            <th>Plan</th>
+            <th>Status</th>
+            <th>Subscription End</th>
+            <th>Days Left</th>
+            <th>Payment</th>
+            <th>Registered</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for uid, u in users.items() %}
+          <tr id="row-{{ uid }}">
+            <td>
+              <div class="user-name">{{ u.username }}</div>
+              <div class="user-email">{{ u.email }}</div>
+            </td>
+            <td><span class="company">{{ u.company }}</span></td>
+            <td>{{ u.plan_label }}</td>
+            <td>
+              {% if u.is_sub_active %}
+                <span class="badge badge-active">● Active</span>
+              {% elif u.payment_status == 'pending' %}
+                <span class="badge badge-pending">⏳ Pending</span>
+              {% elif not u.is_active %}
+                <span class="badge badge-inactive">○ Inactive</span>
+              {% else %}
+                <span class="badge badge-expired">✗ Expired</span>
+              {% endif %}
+            </td>
+            <td>{{ u.subscription_end or '—' }}</td>
+            <td>
+              {% if u.is_sub_active %}
+                <span class="days-left {% if u.days_remaining <= 7 %}days-warn{% else %}days-ok{% endif %}">
+                  {{ u.days_remaining }}d
+                </span>
+              {% elif u.subscription_end %}
+                <span class="days-left days-out">Expired</span>
+              {% else %}
+                <span style="color:var(--muted)">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.payment_status == 'paid' %}
+                <span style="color:#22c55e; font-weight:700; font-size:.75rem;">✓ Paid</span>
+              {% else %}
+                <span style="color:#f59e0b; font-size:.75rem;">Pending</span>
+              {% endif %}
+            </td>
+            <td style="font-size:.75rem; color:var(--muted);">
+              {{ u.created_at[:10] if u.created_at else '—' }}
+            </td>
+            <td>
+              <div class="actions">
+                {% if not u.is_sub_active %}
+                <button class="act-btn btn-activate"
+                        onclick="activateUser('{{ uid }}', '{{ u.username }}')">Activate</button>
+                {% else %}
+                <button class="act-btn btn-deactivate"
+                        onclick="deactivateUser('{{ uid }}', '{{ u.username }}')">Pause</button>
+                {% endif %}
+                <button class="act-btn btn-extend"
+                        onclick="openExtend('{{ uid }}', '{{ u.username }}')">Extend</button>
+                <button class="act-btn btn-delete"
+                        onclick="deleteUser('{{ uid }}', '{{ u.username }}')">Delete</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">No registered users yet. Users will appear here after they register.</div>
+    {% endif %}
+  </div>
+
+  </div>{# end users-section #}
+  </div>{# end panel-users #}
+
+  <!-- ══ TAB: EVENTS ════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-events">
+  <div class="events-section">
+    <div class="sec-title">📸 All Events ({{ all_events|length }})</div>
+
+    {% if all_events %}
+    <div class="events-grid">
+      {% for ev in all_events %}
+      <div class="ev-card">
+
+        <!-- QR + Info row -->
+        <div class="ev-card-top">
+          <!-- QR thumbnail — click to enlarge -->
+          <div class="ev-qr-box" onclick="showQR('/qr/{{ ev.id }}', '{{ ev.name }}')">
+            <img src="/qr/{{ ev.id }}" alt="QR" loading="lazy">
+            <div class="qr-hover-label">🔍 View</div>
+          </div>
+
+          <!-- Event details -->
+          <div class="ev-info">
+            <div>
+              <div class="ev-name">{{ ev.name }}</div>
+              <div class="ev-owner">👤 {{ ev.owner_name or 'Superadmin' }}</div>
+            </div>
+            <div class="ev-meta">
+              <div class="ev-meta-row">
+                Status:&nbsp;
+                <span class="ev-status-{{ ev.status }}">
+                  {% if ev.status == 'ready' %}✓ Ready
+                  {% elif ev.status == 'processing' %}⏳ Processing
+                  {% elif ev.status == 'error' %}✗ Error
+                  {% else %}{{ ev.status }}{% endif %}
+                </span>
+              </div>
+              <div class="ev-meta-row">Photos: <strong>{{ ev.photo_count or 0 }}</strong></div>
+              <div class="ev-meta-row">Created: <strong>{{ ev.created_at[:10] if ev.created_at else '—' }}</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User link bar -->
+        <div style="padding:8px 14px; border-top:1px solid var(--border); background:rgba(59,130,246,0.03);">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:.68rem; color:var(--muted); flex-shrink:0;">🔗 Link:</span>
+            <input type="text" value="{{ ev.user_url }}" readonly
+                   id="link-{{ ev.id }}"
+                   style="flex:1; background:transparent; border:none; outline:none;
+                          color:#60a5fa; font-size:.7rem; cursor:pointer; font-family:monospace;"
+                   onclick="this.select()">
+            <button onclick="copyLink('{{ ev.user_url }}', this)"
+                    style="flex-shrink:0; background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.25);
+                           color:#60a5fa; border-radius:6px; padding:3px 10px;
+                           font-size:.68rem; font-weight:700; cursor:pointer; font-family:inherit;">
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="ev-card-btns">
+          <a href="{{ ev.user_url }}" target="_blank">🌐 Open</a>
+          <a href="/qr/{{ ev.id }}/download">⬇ QR</a>
+          <button onclick="printQR('{{ ev.id }}', '{{ ev.name }}')">🖨 Print</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">No events created yet.</div>
+    {% endif %}
+  </div>
+
+  </div>{# end events-section #}
+  </div>{# end panel-events #}
+
+  <!-- ══ TAB: PAYMENT ═══════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-payment">
+
+    <div class="pay-tab-layout">
+
+      <!-- Left: UPI + QR ─────────────────────────────────────────── -->
+      <div class="pay-panel">
+        <div class="pay-panel-title"><span>📱</span> UPI Payment</div>
+
+        <div class="ps-field">
+          <label class="ps-label">UPI ID <span style="color:#f59e0b;">*</span></label>
+          <input class="ps-input" type="text" id="ps_upi_id"
+                 placeholder="yourname@upi  or  yourname@paytm"
+                 value="{{ payment.upi_id }}">
+        </div>
+        <div class="ps-field">
+          <label class="ps-label">Display Name (shown on QR)</label>
+          <input class="ps-input" type="text" id="ps_upi_name"
+                 placeholder="Zayron Infotech Pvt. Ltd."
+                 value="{{ payment.upi_name }}">
+        </div>
+
+        <!-- QR preview + actions -->
+        <div class="qr-gen-row">
+          <div class="qr-gen-preview" id="qrGenPreview">
+            {% if payment.has_qr %}
+            <img src="/payment-qr?t={{ range(1,9999)|random }}" id="psQrImg" alt="Payment QR"
+                 style="width:104px;height:104px;object-fit:contain;display:block;">
+            {% else %}
+            <div class="no-qr-msg" id="psQrImg">No QR<br>generated yet</div>
+            {% endif %}
+          </div>
+          <div class="qr-gen-actions">
+            <button class="btn-gen-qr" id="btnGenQR" onclick="generateQR()">
+              🔄 Generate QR from UPI ID
+            </button>
+            <label class="btn-upload-qr">
+              📷 Upload QR Image
+              <input type="file" id="psQrFile" accept="image/*" onchange="previewQRUpload(this)">
+            </label>
+            <button class="btn-remove-qr" id="psRemoveQrBtn"
+                    style="{% if not payment.has_qr %}display:none;{% endif %}"
+                    onclick="psRemoveQR()">🗑 Remove QR</button>
+            <div class="qr-status-txt" id="qrStatusTxt">
+              {% if payment.has_qr %}✅ QR is active on register page{% else %}Generate or upload a QR{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Bank / Card Details ─────────────────────────────── -->
+      <div class="pay-panel">
+        <div class="pay-panel-title"><span>🏦</span> Bank / Card Details</div>
+
+        <div class="ps-field">
+          <label class="ps-label">Account Holder Name</label>
+          <input class="ps-input" type="text" id="ps_account_name"
+                 placeholder="Zayron Infotech Pvt. Ltd."
+                 value="{{ payment.account_name }}">
+        </div>
+        <div class="ps-field">
+          <label class="ps-label">Account Number</label>
+          <input class="ps-input" type="text" id="ps_account_number"
+                 placeholder="0000 0000 0000 0000"
+                 value="{{ payment.account_number }}">
+        </div>
+        <div class="ps-field">
+          <label class="ps-label">IFSC Code</label>
+          <input class="ps-input" type="text" id="ps_ifsc_code"
+                 placeholder="SBIN0001234"
+                 value="{{ payment.ifsc_code }}">
+        </div>
+        <div class="ps-field">
+          <label class="ps-label">Bank Name</label>
+          <input class="ps-input" type="text" id="ps_bank_name"
+                 placeholder="State Bank of India"
+                 value="{{ payment.bank_name }}">
+        </div>
+        <div class="ps-field">
+          <label class="ps-label">Branch</label>
+          <input class="ps-input" type="text" id="ps_branch"
+                 placeholder="Main Branch"
+                 value="{{ payment.branch }}">
+        </div>
+      </div>
+
+    </div>{# end pay-tab-layout #}
+
+    <!-- Payment Note + Save ─────────────────────────────────────── -->
+    <div class="pay-note-card" style="margin-top:20px;">
+      <div class="ps-field" style="margin-bottom:14px;">
+        <label class="ps-label">Payment Note <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(shown to users on register page)</span></label>
+        <textarea class="ps-input ps-textarea" id="ps_amount_note"
+                  placeholder="Pay as per your selected plan and mention your Username in the payment remarks.">{{ payment.amount_note }}</textarea>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <button class="ps-save-btn" onclick="savePaymentSettings()">💾 Save All Payment Settings</button>
+        <span class="ps-status" id="psStatus"></span>
+      </div>
+    </div>
+
+  </div>{# end panel-payment #}
+
+  <!-- QR Lightbox -->
+  <div class="qr-lightbox" id="qrLightbox" onclick="closeQR()">
+    <div class="qr-lightbox-name" id="qrLightboxName"></div>
+    <img id="qrLightboxImg" src="" alt="QR Code">
+    <a id="qrLightboxDownload" href="#" style="color:#f59e0b;font-size:.8rem;font-weight:700;text-decoration:none;" onclick="event.stopPropagation()">⬇ Download QR</a>
+    <button class="qr-lightbox-close">✕ Close</button>
+  </div>
+
+</div>
+
+<!-- ── Create User Modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="createUserModal">
+  <div class="modal" style="width:500px; max-width:95vw;">
+    <h3 style="margin-bottom:4px;">➕ Create New User</h3>
+    <p style="margin-bottom:16px;">Fill in the details. Activate &amp; set subscription after creation.</p>
+
+    <div class="cu-error" id="cuError"></div>
+
+    <div class="cu-grid">
+      <!-- Username -->
+      <div>
+        <label class="cu-label">Username <span class="req">*</span></label>
+        <input class="cu-input" type="text" id="cu_username" placeholder="e.g. john_photos" maxlength="30">
+        <div class="cu-hint" id="cu_username_hint"></div>
+      </div>
+      <!-- Company -->
+      <div>
+        <label class="cu-label">Company / Name <span class="req">*</span></label>
+        <input class="cu-input" type="text" id="cu_company" placeholder="Company or full name" maxlength="80">
+      </div>
+      <!-- Email -->
+      <div>
+        <label class="cu-label">Email <span class="req">*</span></label>
+        <input class="cu-input" type="email" id="cu_email" placeholder="client@email.com">
+      </div>
+      <!-- Phone -->
+      <div>
+        <label class="cu-label">Phone</label>
+        <input class="cu-input" type="tel" id="cu_phone" placeholder="+91 99999 99999" maxlength="20">
+      </div>
+      <!-- Password -->
+      <div>
+        <label class="cu-label">Password <span class="req">*</span></label>
+        <input class="cu-input" type="password" id="cu_password" placeholder="Min. 6 characters">
+        <div class="cu-hint" id="cu_pwd_hint"></div>
+      </div>
+      <!-- Confirm Password -->
+      <div>
+        <label class="cu-label">Confirm Password <span class="req">*</span></label>
+        <input class="cu-input" type="password" id="cu_confirm" placeholder="Repeat password">
+        <div class="cu-hint" id="cu_confirm_hint"></div>
+      </div>
+    </div>
+
+    <div class="modal-btns" style="margin-top:18px;">
+      <button class="btn-cancel" onclick="closeCU()">Cancel</button>
+      <button class="btn-confirm" id="cuSubmitBtn" onclick="submitCreateUser()">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Extend Modal -->
+<div class="modal-overlay" id="extendModal">
+  <div class="modal">
+    <h3>Extend Subscription</h3>
+    <p id="extendModalDesc">Select how many days to add for this user.</p>
+    <select id="extendDays">
+      <option value="1">+1 Day (Trial)</option>
+      <option value="3">+3 Days</option>
+      <option value="6">+6 Days</option>
+      <option value="30" selected>+30 Days (1 Month)</option>
+      <option value="90">+90 Days (3 Months)</option>
+      <option value="180">+180 Days (6 Months)</option>
+      <option value="365">+365 Days (1 Year)</option>
+    </select>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('extendModal')">Cancel</button>
+      <button class="btn-confirm" id="extendConfirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let _extendUid = null;
+
+  function showToast(msg, ok=true) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.borderColor = ok ? 'rgba(34,197,94,.3)' : 'rgba(239,68,68,.3)';
+    t.style.color = ok ? '#86efac' : '#fca5a5';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+  // ── Activate ────────────────────────────────────────────────────────────────
+  function activateUser(uid, name) {
+    if (!confirm(`Activate subscription for "${name}"?`)) return;
+    fetch(`/superadmin/activate/${uid}`, {method:'POST'})
+      .then(r => r.json()).then(d => {
+        if (d.ok) { showToast(`✅ ${name} activated — ends ${d.end}`); setTimeout(()=>location.reload(),1500); }
+        else showToast('Error: ' + (d.error||'unknown'), false);
+      });
+  }
+
+  // ── Deactivate ──────────────────────────────────────────────────────────────
+  function deactivateUser(uid, name) {
+    if (!confirm(`Pause/deactivate "${name}"?`)) return;
+    fetch(`/superadmin/deactivate/${uid}`, {method:'POST'})
+      .then(r => r.json()).then(d => {
+        if (d.ok) { showToast(`⏸ ${name} deactivated`); setTimeout(()=>location.reload(),1500); }
+        else showToast('Error: ' + (d.error||'unknown'), false);
+      });
+  }
+
+  // ── Extend ──────────────────────────────────────────────────────────────────
+  function openExtend(uid, name) {
+    _extendUid = uid;
+    document.getElementById('extendModalDesc').textContent =
+      `Add days to "${name}" subscription.`;
+    document.getElementById('extendModal').classList.add('show');
+  }
+  document.getElementById('extendConfirm').addEventListener('click', function() {
+    if (!_extendUid) return;
+    const days = parseInt(document.getElementById('extendDays').value);
+    fetch(`/superadmin/extend/${_extendUid}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({days})
+    }).then(r=>r.json()).then(d => {
+      if (d.ok) {
+        showToast(`✅ Extended — new end: ${d.new_end}`);
+        closeModal('extendModal');
+        setTimeout(()=>location.reload(),1500);
+      } else showToast('Error: '+(d.error||'unknown'), false);
+    });
+  });
+
+  // ── Create User ─────────────────────────────────────────────────────────────
+  function closeCU() {
+    document.getElementById('createUserModal').classList.remove('show');
+    ['cu_username','cu_company','cu_email','cu_phone','cu_password','cu_confirm'].forEach(id=>{
+      document.getElementById(id).value='';
+    });
+    ['cu_username_hint','cu_pwd_hint','cu_confirm_hint'].forEach(id=>{
+      const el=document.getElementById(id); if(el){ el.textContent=''; el.className='cu-hint'; }
+    });
+    const errEl=document.getElementById('cuError');
+    if(errEl){ errEl.textContent=''; errEl.className='cu-error'; }
+  }
+
+  // Live hints
+  document.getElementById('cu_username').addEventListener('input', function(){
+    const v=this.value.trim(), h=document.getElementById('cu_username_hint');
+    if(!v){h.textContent='';h.className='cu-hint';return;}
+    if(v.length<3){h.textContent='Min 3 characters';h.className='cu-hint err';}
+    else if(!/^[a-zA-Z0-9_]+$/.test(v)){h.textContent='Letters, numbers & underscore only';h.className='cu-hint err';}
+    else{h.textContent='✓ Looks good';h.className='cu-hint ok';}
+  });
+  document.getElementById('cu_password').addEventListener('input', function(){
+    const v=this.value, h=document.getElementById('cu_pwd_hint');
+    if(!v){h.textContent='';h.className='cu-hint';return;}
+    if(v.length<6){h.textContent='Too short';h.className='cu-hint err';}
+    else if(v.length<10){h.textContent='Fair strength';h.className='cu-hint';}
+    else{h.textContent='✓ Strong';h.className='cu-hint ok';}
+    checkCUConfirm();
+  });
+  function checkCUConfirm(){
+    const p=document.getElementById('cu_password').value;
+    const c=document.getElementById('cu_confirm').value;
+    const h=document.getElementById('cu_confirm_hint');
+    if(!c){h.textContent='';h.className='cu-hint';return;}
+    if(p===c){h.textContent='✓ Match';h.className='cu-hint ok';}
+    else{h.textContent='✗ Do not match';h.className='cu-hint err';}
+  }
+  document.getElementById('cu_confirm').addEventListener('input', checkCUConfirm);
+
+  function submitCreateUser() {
+    const errEl = document.getElementById('cuError');
+    errEl.className = 'cu-error'; errEl.textContent = '';
+
+    const username = document.getElementById('cu_username').value.trim();
+    const company  = document.getElementById('cu_company').value.trim();
+    const email    = document.getElementById('cu_email').value.trim();
+    const phone    = document.getElementById('cu_phone').value.trim();
+    const password = document.getElementById('cu_password').value;
+    const confirm  = document.getElementById('cu_confirm').value;
+    const sub_days = 30;   // default; superadmin sets plan via Activate/Extend
+    const activate = false; // created as pending; activate separately
+
+    if (!username || !company || !email || !password || !confirm) {
+      errEl.textContent = 'Please fill all required fields.'; errEl.className='cu-error show'; return;
+    }
+    if (username.length < 3 || !/^[a-zA-Z0-9_]+$/.test(username)) {
+      errEl.textContent = 'Invalid username (min 3 chars, letters/numbers/underscore).'; errEl.className='cu-error show'; return;
+    }
+    if (password.length < 6) {
+      errEl.textContent = 'Password must be at least 6 characters.'; errEl.className='cu-error show'; return;
+    }
+    if (password !== confirm) {
+      errEl.textContent = 'Passwords do not match.'; errEl.className='cu-error show'; return;
+    }
+
+    const btn = document.getElementById('cuSubmitBtn');
+    btn.textContent = 'Creating…'; btn.disabled = true;
+
+    fetch('/superadmin/create-user', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({username, company, email, phone, password, sub_days, activate})
+    }).then(r=>r.json()).then(d=>{
+      btn.textContent='Create User'; btn.disabled=false;
+      if (d.ok) {
+        showToast(`✅ User "${username}" created! Use Activate to set subscription.`);
+        closeCU();
+        setTimeout(()=>location.reload(), 1200);
+      } else {
+        errEl.textContent = d.error || 'Unknown error.';
+        errEl.className = 'cu-error show';
+      }
+    }).catch(()=>{ btn.textContent='Create User'; btn.disabled=false; errEl.textContent='Network error.'; errEl.className='cu-error show'; });
+  }
+
+  // ── Tabs ─────────────────────────────────────────────────────────────────────
+  function switchTab(name) {
+    ['users','events','payment'].forEach(t => {
+      document.getElementById('tab-btn-'  + t).classList.toggle('active', t === name);
+      document.getElementById('panel-'    + t).classList.toggle('active', t === name);
+    });
+  }
+
+  // ── Payment Settings ─────────────────────────────────────────────────────────
+  let _removeQR = false;
+
+  // Auto-generate QR code from UPI ID via backend
+  async function generateQR() {
+    const upiId   = document.getElementById('ps_upi_id').value.trim();
+    const upiName = document.getElementById('ps_upi_name').value.trim();
+    if (!upiId) { showToast('Enter a UPI ID first', false); return; }
+    const btn = document.getElementById('btnGenQR');
+    btn.disabled = true; btn.textContent = '⏳ Generating…';
+    try {
+      const res = await fetch('/superadmin/generate-payment-qr', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({upi_id: upiId, upi_name: upiName})
+      });
+      const d = await res.json();
+      if (d.ok) {
+        const ts  = Date.now();
+        const prev = document.getElementById('psQrImg');
+        if (prev.tagName === 'IMG') {
+          prev.src = '/payment-qr?t=' + ts;
+        } else {
+          const img = document.createElement('img');
+          img.id = 'psQrImg'; img.src = '/payment-qr?t=' + ts;
+          img.style.cssText = 'width:104px;height:104px;object-fit:contain;display:block;';
+          prev.replaceWith(img);
+        }
+        _removeQR = false;
+        document.getElementById('psRemoveQrBtn').style.display = 'inline-block';
+        document.getElementById('qrStatusTxt').textContent = '✅ QR generated from UPI ID!';
+        document.getElementById('qrStatusTxt').style.color = '#22c55e';
+        showToast('✅ QR generated — click Save to confirm');
+      } else {
+        showToast('Error: ' + (d.error || 'Generate failed'), false);
+      }
+    } catch(e) { showToast('Network error', false); }
+    btn.disabled = false; btn.textContent = '🔄 Generate QR from UPI ID';
+  }
+
+  // Preview uploaded QR image file locally
+  function previewQRUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    _removeQR = false;
+    document.getElementById('psRemoveQrBtn').style.display = 'inline-block';
+    document.getElementById('qrStatusTxt').textContent = '📁 ' + file.name + ' — click Save to apply';
+    document.getElementById('qrStatusTxt').style.color = '';
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById('psQrImg');
+      if (prev.tagName === 'IMG') {
+        prev.src = e.target.result;
+      } else {
+        const img = document.createElement('img');
+        img.id = 'psQrImg'; img.src = e.target.result;
+        img.style.cssText = 'width:104px;height:104px;object-fit:contain;display:block;';
+        prev.replaceWith(img);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function psRemoveQR() {
+    _removeQR = true;
+    document.getElementById('psRemoveQrBtn').style.display = 'none';
+    document.getElementById('qrStatusTxt').textContent = '🗑 QR will be removed on save';
+    document.getElementById('qrStatusTxt').style.color = '#ef4444';
+    document.getElementById('psQrFile').value = '';
+    const prev = document.getElementById('psQrImg');
+    if (prev.tagName === 'IMG') {
+      const div = document.createElement('div');
+      div.id = 'psQrImg'; div.className = 'no-qr-msg';
+      div.innerHTML = 'No QR<br>generated yet';
+      prev.replaceWith(div);
+    }
+  }
+
+  async function savePaymentSettings() {
+    const statusEl = document.getElementById('psStatus');
+    statusEl.textContent = 'Saving…'; statusEl.className = 'ps-status';
+    const fd = new FormData();
+    fd.append('upi_id',         document.getElementById('ps_upi_id').value.trim());
+    fd.append('upi_name',       document.getElementById('ps_upi_name').value.trim());
+    fd.append('account_name',   document.getElementById('ps_account_name').value.trim());
+    fd.append('account_number', document.getElementById('ps_account_number').value.trim());
+    fd.append('ifsc_code',      document.getElementById('ps_ifsc_code').value.trim());
+    fd.append('bank_name',      document.getElementById('ps_bank_name').value.trim());
+    fd.append('branch',         document.getElementById('ps_branch').value.trim());
+    fd.append('amount_note',    document.getElementById('ps_amount_note').value.trim());
+    if (_removeQR) fd.append('remove_qr', '1');
+    const qrFile = document.getElementById('psQrFile').files[0];
+    if (qrFile) fd.append('payment_qr', qrFile);
+    try {
+      const res = await fetch('/superadmin/payment-settings', {method:'POST', body:fd});
+      const d   = await res.json();
+      if (d.ok) {
+        statusEl.textContent = '✅ Saved!'; statusEl.className = 'ps-status ok';
+        _removeQR = false;
+        document.getElementById('qrStatusTxt').textContent = '✅ QR is active on register page';
+        document.getElementById('qrStatusTxt').style.color = '#22c55e';
+        showToast('✅ Payment settings saved!');
+        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+      } else {
+        statusEl.textContent = '❌ ' + (d.error||'Error'); statusEl.className = 'ps-status err';
+      }
+    } catch(e) {
+      statusEl.textContent = '❌ Network error'; statusEl.className = 'ps-status err';
+    }
+  }
+
+  // ── QR Lightbox ─────────────────────────────────────────────────────────────
+  function showQR(src, name) {
+    document.getElementById('qrLightboxImg').src  = src;
+    document.getElementById('qrLightboxName').textContent = name;
+    document.getElementById('qrLightboxDownload').href = src.replace('/qr/', '/qr/') + '/download';
+    document.getElementById('qrLightbox').classList.add('show');
+  }
+  function closeQR() { document.getElementById('qrLightbox').classList.remove('show'); }
+
+  // ── Copy Link ────────────────────────────────────────────────────────────────
+  function copyLink(url, btn) {
+    navigator.clipboard.writeText(url).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied';
+      btn.style.color = '#22c55e';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1800);
+    });
+  }
+
+  // ── Print QR ─────────────────────────────────────────────────────────────────
+  function printQR(id, name) {
+    const w = window.open('', '_blank', 'width=400,height=500');
+    w.document.write(`<!DOCTYPE html><html><head><title>QR – ${name}</title>
+    <style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;background:#fff;}
+    img{width:280px;height:280px;} h2{font-size:1rem;margin-top:14px;color:#1e293b;text-align:center;}</style></head>
+    <body><img src="/qr/${id}" onload="window.print()"><h2>${name}</h2></body></html>`);
+    w.document.close();
+  }
+
+  // ── Delete ──────────────────────────────────────────────────────────────────
+  function deleteUser(uid, name) {
+    if (!confirm(`⚠️ Permanently delete user "${name}"?\nAll their data will remain but they cannot log in.`)) return;
+    fetch(`/superadmin/delete-user/${uid}`, {method:'POST'})
+      .then(r=>r.json()).then(d => {
+        if (d.ok) { showToast(`🗑 ${name} deleted`); document.getElementById(`row-${uid}`).remove(); }
+        else showToast('Error: '+(d.error||'unknown'), false);
+      });
+  }
+</script>
+</body>
+</html>

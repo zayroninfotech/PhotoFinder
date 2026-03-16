@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register – Zayron Infotech PhotoFinder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #000000;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 32px 16px 48px;
+      position: relative; overflow-x: hidden;
+    }
+    .page-wrap { width: 100%; max-width: 580px; }
+
+    /* Background glow */
+    body::before {
+      content: '';
+      position: fixed; top: -200px; left: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(30,90,200,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    body::after {
+      content: '';
+      position: fixed; bottom: -200px; right: -200px;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Top bar */
+    .top-strip {
+      position: fixed; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #1d4ed8, #3b82f6 40%, #f59e0b 70%, #fbbf24 100%);
+      z-index: 100;
+    }
+
+    .card {
+      background: #080c18;
+      border: 1px solid rgba(59,130,246,0.12);
+      border-radius: 20px;
+      width: 100%; max-width: 580px;
+      padding: 40px 44px;
+      position: relative;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    }
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #1d4ed8, #3b82f6 40%, #f59e0b 70%, #fbbf24 100%);
+      border-radius: 20px 20px 0 0;
+    }
+
+    /* Brand */
+    .brand {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 28px;
+    }
+    .brand-logo-wrap {
+      background: #fff; border-radius: 12px;
+      padding: 6px 10px; display: flex; align-items: center;
+      box-shadow: 0 4px 18px rgba(59,130,246,0.2), 0 4px 18px rgba(245,158,11,0.15);
+      flex-shrink: 0;
+    }
+    .brand-logo { height: 44px; width: auto; max-width: 100px; object-fit: contain; display: block; }
+    .brand-text { flex: 1; }
+    .brand-name { color: #f0f4ff; font-size: 1rem; font-weight: 800; line-height: 1.2; }
+    .brand-name span {
+      background: linear-gradient(90deg, #3b82f6, #60a5fa, #f59e0b);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .brand-sub { color: #1e2a40; font-size: .7rem; margin-top: 3px; text-transform: uppercase; letter-spacing: .06em; }
+
+    .page-title {
+      font-size: 1.3rem; font-weight: 800; color: #f0f4ff;
+      margin-bottom: 4px;
+    }
+    .page-sub { color: #2a3a55; font-size: .82rem; margin-bottom: 28px; }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(59,130,246,0.2), rgba(245,158,11,0.15), transparent);
+      margin-bottom: 28px;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 12px 16px; border-radius: 10px;
+      font-size: .85rem; margin-bottom: 20px;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .alert-error {
+      background: rgba(239,68,68,.08);
+      border: 1px solid rgba(239,68,68,.25);
+      color: #fca5a5;
+    }
+    .alert-success {
+      background: rgba(34,197,94,.08);
+      border: 1px solid rgba(34,197,94,.25);
+      color: #86efac;
+    }
+
+    /* Form grid */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { margin-bottom: 18px; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      display: block; color: #2a3a55;
+      font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      margin-bottom: 6px;
+    }
+    label .req { color: #f59e0b; margin-left: 2px; }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    select {
+      width: 100%;
+      padding: 11px 14px;
+      background: #05080f;
+      border: 1px solid rgba(59,130,246,0.1);
+      border-radius: 10px;
+      color: #e8eeff; font-size: .92rem;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      font-family: inherit;
+    }
+    input:focus, select:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+    input.invalid { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.1); }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+    input::placeholder { color: #0d1525; }
+    select option { background: #080c18; color: #e8eeff; }
+
+    /* Subscription dropdown custom */
+    .plan-select-wrap { position: relative; }
+    .plan-select-wrap select { padding-right: 36px; cursor: pointer; }
+
+    /* Plan cards row */
+    .plan-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .plan-card {
+      background: #05080f;
+      border: 1.5px solid rgba(59,130,246,0.1);
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .plan-card:hover { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.05); }
+    .plan-card.selected {
+      border-color: #3b82f6;
+      background: rgba(59,130,246,0.1);
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+    }
+    .plan-card .pdays { color: #60a5fa; font-weight: 800; font-size: .85rem; }
+    .plan-card .ptag  { color: #2a3a55; font-size: .62rem; text-transform: uppercase; letter-spacing: .05em; margin: 2px 0; }
+    .plan-card .pprice { color: #f59e0b; font-weight: 700; font-size: .8rem; }
+    /* 3rd-last and beyond — full row on mobile */
+    @media (max-width: 500px) { .plan-grid { grid-template-columns: repeat(2,1fr); } }
+
+    /* Password strength */
+    .pwd-hint { font-size: .68rem; color: #1e2a40; margin-top: 4px; }
+
+    /* Submit row */
+    .btn-row { margin-top: 8px; display: flex; flex-direction: column; gap: 12px; }
+    .btn-submit {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6 40%, #f59e0b 75%, #fbbf24 100%);
+      border: none; border-radius: 10px;
+      color: #fff; font-size: 1rem; font-weight: 800;
+      cursor: pointer; letter-spacing: .03em;
+      box-shadow: 0 4px 22px rgba(59,130,246,0.3), 0 4px 18px rgba(245,158,11,0.1);
+      transition: opacity .2s, transform .1s, box-shadow .2s;
+    }
+    .btn-submit:hover  { opacity: .9; box-shadow: 0 6px 30px rgba(59,130,246,0.5); }
+    .btn-submit:active { transform: scale(.98); }
+
+    /* Continue button (replaces submit in form) */
+    .btn-continue {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6 50%, #2563eb 100%);
+      border: none;
+      border-radius: 10px;
+      color: #fff; font-size: 1rem; font-weight: 800;
+      cursor: pointer; letter-spacing: .03em; font-family: inherit;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.35);
+      transition: opacity .2s, transform .1s, box-shadow .2s;
+    }
+    .btn-continue:hover  { opacity: .9; box-shadow: 0 6px 28px rgba(59,130,246,0.5); }
+    .btn-continue:active { transform: scale(.98); }
+
+    .login-link {
+      text-align: center; color: #1e2a40; font-size: .82rem;
+    }
+    .login-link a {
+      color: #60a5fa; text-decoration: none; font-weight: 600;
+    }
+    .login-link a:hover { color: #93c5fd; }
+    .back-link { color: #60a5fa !important; }
+
+    /* Info box */
+    .info-box {
+      background: rgba(245,158,11,0.05);
+      border: 1px solid rgba(245,158,11,0.15);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 22px;
+      font-size: .8rem;
+      color: #6b5a3a;
+      line-height: 1.5;
+    }
+    .info-box strong { color: #c49a3a; }
+
+    @media (max-width: 600px) {
+      .card { padding: 28px 20px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+
+    /* ── Payment Modal Overlay ─────────────────────────────────────────────── */
+    .pay-modal-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .pay-modal-overlay.open { display: flex; }
+
+    .pay-modal {
+      background: #080c18;
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 22px;
+      width: 100%; max-width: 540px;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 30px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(245,158,11,0.08);
+      animation: modalPop .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes modalPop {
+      from { transform: scale(.88) translateY(24px); opacity: 0; }
+      to   { transform: scale(1)   translateY(0);    opacity: 1; }
+    }
+    .pay-modal::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24 40%, #3b82f6 70%, #60a5fa 100%);
+      border-radius: 22px 22px 0 0;
+    }
+
+    .pay-modal-inner { padding: 30px 32px 28px; }
+
+    /* Close btn */
+    .pay-modal-close {
+      position: absolute; top: 14px; right: 16px;
+      background: rgba(100,116,139,0.12); border: 1px solid rgba(100,116,139,0.2);
+      color: #64748b; border-radius: 8px;
+      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; cursor: pointer; font-family: inherit;
+      transition: background .15s, color .15s;
+    }
+    .pay-modal-close:hover { background: rgba(239,68,68,0.12); color: #f87171; border-color: rgba(239,68,68,0.2); }
+
+    .pay-step-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 20px; padding: 4px 14px;
+      color: #f59e0b; font-size: .72rem; font-weight: 700;
+      letter-spacing: .05em; text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .pay-title { font-size: 1.15rem; font-weight: 800; color: #f0f4ff; margin-bottom: 3px; }
+    .pay-sub   { color: #2a3a55; font-size: .8rem; margin-bottom: 20px; }
+    .pay-body  { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+
+    /* QR side */
+    .pay-qr-wrap {
+      flex-shrink: 0;
+      background: #fff;
+      border-radius: 14px;
+      padding: 10px;
+      width: 130px; height: 130px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 20px rgba(245,158,11,0.2);
+    }
+    .pay-qr-wrap img { width: 110px; height: 110px; object-fit: contain; display: block; }
+    .pay-qr-placeholder {
+      width: 110px; height: 110px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 6px; color: #94a3b8; font-size: .65rem; text-align: center;
+    }
+    .pay-qr-placeholder svg { opacity: .4; }
+
+    /* Details side */
+    .pay-details { flex: 1; min-width: 180px; }
+    .pay-section-label {
+      font-size: .62rem; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: #2a3a55; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .pay-section-label::after {
+      content: ''; flex: 1; height: 1px;
+      background: rgba(245,158,11,0.15);
+    }
+    .pay-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 7px;
+    }
+    .pay-row-label { color: #2a3a55; font-size: .74rem; flex-shrink: 0; }
+    .pay-row-val   { color: #e8eeff; font-size: .78rem; font-weight: 600; font-family: monospace; }
+    .pay-copy-btn {
+      background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25);
+      color: #60a5fa; border-radius: 6px; padding: 2px 9px;
+      font-size: .65rem; font-weight: 700; cursor: pointer;
+      flex-shrink: 0; font-family: inherit; transition: background .15s;
+    }
+    .pay-copy-btn:hover { background: rgba(59,130,246,0.22); }
+    .pay-divider { height: 1px; background: rgba(59,130,246,0.1); margin: 12px 0; }
+    .pay-note {
+      margin-top: 16px;
+      background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
+      border-radius: 10px; padding: 11px 14px;
+      font-size: .78rem; color: #c49a3a; line-height: 1.5;
+    }
+    .pay-note strong { color: #fbbf24; }
+    .pay-empty {
+      text-align: center; padding: 24px;
+      color: #1e2a40; font-size: .82rem;
+      border: 1px dashed rgba(59,130,246,0.1);
+      border-radius: 12px;
+    }
+
+    /* Payment confirm row */
+    .pay-confirm-row {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(245,158,11,0.15);
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .pay-confirm-check {
+      display: flex; align-items: flex-start; gap: 10px;
+      cursor: pointer; user-select: none;
+    }
+    .pay-confirm-check input[type="checkbox"] {
+      width: 18px; height: 18px; flex-shrink: 0;
+      accent-color: #f59e0b; cursor: pointer; margin-top: 2px;
+    }
+    .pay-check-text {
+      color: #94a3b8; font-size: .84rem; line-height: 1.5;
+    }
+
+    /* Final Register button */
+    .btn-final-register {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6 40%, #f59e0b 75%, #fbbf24 100%);
+      border: none; border-radius: 10px;
+      color: #fff; font-size: 1.05rem; font-weight: 800;
+      cursor: pointer; letter-spacing: .03em; font-family: inherit;
+      box-shadow: 0 4px 22px rgba(59,130,246,0.3), 0 4px 18px rgba(245,158,11,0.15);
+      transition: opacity .2s, transform .1s, box-shadow .2s;
+    }
+    .btn-final-register:disabled {
+      background: rgba(59,130,246,0.08);
+      color: #2a3a55; cursor: not-allowed;
+      box-shadow: none; border: 1.5px dashed rgba(59,130,246,0.18);
+    }
+    .btn-final-register:not(:disabled):hover  { opacity: .9; box-shadow: 0 6px 30px rgba(59,130,246,.5); }
+    .btn-final-register:not(:disabled):active { transform: scale(.98); }
+
+    /* Back to Login button */
+    .btn-back-login {
+      display: block; text-align: center;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid rgba(100,116,139,0.25);
+      border-radius: 10px;
+      color: #475569; font-size: .86rem; font-weight: 600;
+      text-decoration: none;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .btn-back-login:hover {
+      background: rgba(100,116,139,0.08);
+      color: #94a3b8; border-color: rgba(100,116,139,0.4);
+    }
+
+    @media (max-width: 600px) {
+      .pay-modal-inner { padding: 24px 18px 20px; }
+      .pay-body { flex-direction: column; align-items: center; }
+      .pay-modal { max-height: 95vh; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Page Loader ─────────────────────────────── -->
+<div id="pgLoader"><div class="pg-spin"></div></div>
+<style>
+  #pgLoader{position:fixed;inset:0;z-index:99999;background:#000010;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,visibility .45s ease;}
+  #pgLoader.done{opacity:0;visibility:hidden;pointer-events:none;}
+  .pg-spin{width:56px;height:56px;border-radius:50%;border:4px solid rgba(255,255,255,0.07);border-top:4px solid #3b82f6;border-right:4px solid #f59e0b;animation:pgSpin .75s linear infinite;}
+  @keyframes pgSpin{to{transform:rotate(360deg);}}
+</style>
+<script>(function(){var L=document.getElementById('pgLoader');function h(){L.classList.add('done');}window.addEventListener('load',h);window.addEventListener('pageshow',function(e){if(e.persisted)h();});setTimeout(h,6000);})();</script>
+
+<div class="top-strip"></div>
+
+<div class="page-wrap">
+<div class="card">
+
+  <!-- Brand -->
+  <div class="brand">
+    <div class="brand-logo-wrap">
+      <img src="/static/logo.png" alt="Zayron Infotech" class="brand-logo">
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">Zayron Infotech <span>Pvt. Ltd.</span></div>
+      <div class="brand-sub">PhotoFinder — Admin Portal</div>
+    </div>
+  </div>
+
+  <div style="display:inline-flex;align-items:center;gap:8px;
+              background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);
+              border-radius:20px;padding:4px 14px;margin-bottom:10px;">
+    <span style="color:#3b82f6;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">📝 Step 1</span>
+  </div>
+  <div class="page-title">Create Account</div>
+  <div class="page-sub">Fill in your details below, then proceed to payment</div>
+  <div class="divider"></div>
+
+  {% if success %}
+  <div class="alert alert-success">
+    <span>✅</span>
+    <div>{{ success }}<br><a href="/admin/login" style="color:#86efac;font-weight:700;">← Back to Login</a></div>
+  </div>
+  {% else %}
+
+  {% if error %}
+  <div class="alert alert-error"><span>⚠</span> {{ error }}</div>
+  {% endif %}
+
+  <div class="info-box">
+    <strong>How it works:</strong> Register below → Select your subscription plan →
+    Complete payment → Superadmin activates your account → You can start using PhotoFinder.
+  </div>
+
+  <form method="POST" action="/admin/register" id="regForm" novalidate>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Username <span class="req">*</span></label>
+        <input type="text" name="username" id="username"
+               placeholder="your_username"
+               value="{{ form.get('username','') }}"
+               autocomplete="username" maxlength="30">
+        <div class="pwd-hint" id="uname-hint"></div>
+      </div>
+      <div class="form-group">
+        <label>Company / Organisation <span class="req">*</span></label>
+        <input type="text" name="company" placeholder="Company name"
+               value="{{ form.get('company','') }}" maxlength="80">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Email Address <span class="req">*</span></label>
+        <input type="email" name="email" placeholder="you@email.com"
+               value="{{ form.get('email','') }}" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" name="phone" placeholder="+91 99999 99999"
+               value="{{ form.get('phone','') }}" maxlength="20">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Password <span class="req">*</span></label>
+        <input type="password" name="password" id="pwd"
+               placeholder="Min. 6 characters" autocomplete="new-password">
+        <div class="pwd-hint" id="pwd-hint"></div>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password <span class="req">*</span></label>
+        <input type="password" name="confirm_password" id="cpwd"
+               placeholder="Repeat password" autocomplete="new-password">
+        <div class="pwd-hint" id="cpwd-hint"></div>
+      </div>
+    </div>
+
+    <!-- Subscription plan -->
+    <div class="form-group">
+      <label>Subscription Plan <span class="req">*</span></label>
+      <input type="hidden" name="subscription_days" id="sub_days" value="30">
+      <div class="plan-grid" id="planGrid">
+        {% for plan in plans %}
+        <div class="plan-card {% if plan.days == 30 %}selected{% endif %}"
+             data-days="{{ plan.days }}"
+             onclick="selectPlan({{ plan.days }}, this)">
+          <div class="pdays">{{ plan.label }}</div>
+          <div class="ptag">{{ plan.tag }}</div>
+          <div class="pprice">{{ plan.price }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Hidden real submit (triggered by JS from payment card) -->
+    <button type="submit" id="hiddenSubmitBtn" style="display:none;" aria-hidden="true"></button>
+
+    <div class="btn-row">
+      <button type="button" class="btn-continue" id="continueBtn" onclick="goToPayment()">
+        Continue to Payment ↓
+      </button>
+      <div class="login-link">
+        <a href="/admin/login" class="back-link">← Back to Login</a>
+        &nbsp;·&nbsp; Already have an account? <a href="/admin/login">Sign In</a>
+      </div>
+    </div>
+
+  </form>
+  {% endif %}
+
+</div>
+
+</div>{# end .page-wrap #}
+
+<!-- ── Step 2: Payment Modal ─────────────────────────────────────────────── -->
+<div class="pay-modal-overlay" id="payModalOverlay" onclick="overlayClose(event)">
+  <div class="pay-modal" id="payModal">
+    <button class="pay-modal-close" onclick="closePayModal()" title="Close">✕</button>
+    <div class="pay-modal-inner">
+
+      <div class="pay-step-badge">💳 Step 2 of 2</div>
+      <div class="pay-title">Complete Your Payment</div>
+      <div class="pay-sub">Make payment to activate your account after registration.</div>
+
+      {% set has_any = payment.upi_id or payment.account_number %}
+      {% if has_any %}
+      <div class="pay-body">
+
+        <!-- QR Code -->
+        <div class="pay-qr-wrap">
+          {% if payment.has_qr %}
+          <img src="/payment-qr?t={{ range(1,9999)|random }}" alt="Payment QR">
+          {% else %}
+          <div class="pay-qr-placeholder">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/>
+              <rect x="19" y="14" width="2" height="2"/><rect x="14" y="19" width="2" height="2"/>
+              <rect x="18" y="18" width="3" height="3"/>
+            </svg>
+            <span>QR not set</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Details -->
+        <div class="pay-details">
+          {% if payment.upi_id %}
+          <div class="pay-section-label">UPI Payment</div>
+          <div class="pay-row">
+            <span class="pay-row-label">UPI ID</span>
+            <span class="pay-row-val">{{ payment.upi_id }}</span>
+            <button class="pay-copy-btn" onclick="copyPay('{{ payment.upi_id }}', this)">Copy</button>
+          </div>
+          {% if payment.upi_name %}
+          <div class="pay-row">
+            <span class="pay-row-label">Name</span>
+            <span class="pay-row-val">{{ payment.upi_name }}</span>
+          </div>
+          {% endif %}
+          {% endif %}
+
+          {% if payment.account_number %}
+          {% if payment.upi_id %}<div class="pay-divider"></div>{% endif %}
+          <div class="pay-section-label">Bank Transfer</div>
+          {% if payment.account_name %}
+          <div class="pay-row">
+            <span class="pay-row-label">Account Name</span>
+            <span class="pay-row-val">{{ payment.account_name }}</span>
+          </div>
+          {% endif %}
+          <div class="pay-row">
+            <span class="pay-row-label">Account No.</span>
+            <span class="pay-row-val">{{ payment.account_number }}</span>
+            <button class="pay-copy-btn" onclick="copyPay('{{ payment.account_number }}', this)">Copy</button>
+          </div>
+          {% if payment.ifsc_code %}
+          <div class="pay-row">
+            <span class="pay-row-label">IFSC</span>
+            <span class="pay-row-val">{{ payment.ifsc_code }}</span>
+            <button class="pay-copy-btn" onclick="copyPay('{{ payment.ifsc_code }}', this)">Copy</button>
+          </div>
+          {% endif %}
+          {% if payment.bank_name %}
+          <div class="pay-row">
+            <span class="pay-row-label">Bank</span>
+            <span class="pay-row-val">{{ payment.bank_name }}{% if payment.branch %} – {{ payment.branch }}{% endif %}</span>
+          </div>
+          {% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="pay-note">
+        <strong>⚠️ Important:</strong> {{ payment.amount_note or 'Mention your Username in the payment remarks so we can identify your payment.' }}
+      </div>
+
+      {% else %}
+      <div class="pay-empty">
+        Payment details not configured yet. The administrator will share payment instructions.
+      </div>
+      {% endif %}
+
+      <!-- Payment confirmation + Final Submit -->
+      <div class="pay-confirm-row">
+        <label class="pay-confirm-check" id="payConfirmLabel">
+          <input type="checkbox" id="payConfirmBox" onchange="toggleRegisterBtn()">
+          <span class="pay-check-text">I have completed the payment for my selected subscription plan</span>
+        </label>
+        <button type="button" class="btn-final-register" id="finalRegisterBtn"
+                onclick="submitRegistration()" disabled>
+          ✅ Complete Registration →
+        </button>
+        <a href="/admin/login" class="btn-back-login">← Back to Login</a>
+      </div>
+
+    </div>{# end .pay-modal-inner #}
+  </div>{# end .pay-modal #}
+</div>{# end .pay-modal-overlay #}
+
+<script>
+  // Plan selection
+  function selectPlan(days, el) {
+    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('sub_days').value = days;
+  }
+
+  // Live username validation
+  document.getElementById('username').addEventListener('input', function() {
+    const v = this.value.trim();
+    const hint = document.getElementById('uname-hint');
+    if (!v) { hint.textContent = ''; this.classList.remove('invalid'); return; }
+    if (v.length < 3) {
+      hint.style.color = '#ef4444'; hint.textContent = 'At least 3 characters required';
+      this.classList.add('invalid');
+    } else if (!/^[a-zA-Z0-9_]+$/.test(v)) {
+      hint.style.color = '#ef4444'; hint.textContent = 'Only letters, numbers, underscores';
+      this.classList.add('invalid');
+    } else {
+      hint.style.color = '#22c55e'; hint.textContent = '✓ Looks good';
+      this.classList.remove('invalid');
+    }
+  });
+
+  // Password strength
+  document.getElementById('pwd').addEventListener('input', function() {
+    const v = this.value;
+    const hint = document.getElementById('pwd-hint');
+    if (!v) { hint.textContent = ''; return; }
+    if (v.length < 6) {
+      hint.style.color = '#ef4444'; hint.textContent = 'Too short (min 6 chars)';
+    } else if (v.length < 10) {
+      hint.style.color = '#f59e0b'; hint.textContent = 'Fair strength';
+    } else {
+      hint.style.color = '#22c55e'; hint.textContent = '✓ Strong password';
+    }
+    checkConfirm();
+  });
+
+  function checkConfirm() {
+    const p = document.getElementById('pwd').value;
+    const c = document.getElementById('cpwd').value;
+    const hint = document.getElementById('cpwd-hint');
+    if (!c) { hint.textContent = ''; return; }
+    if (p === c) {
+      hint.style.color = '#22c55e'; hint.textContent = '✓ Passwords match';
+      document.getElementById('cpwd').classList.remove('invalid');
+    } else {
+      hint.style.color = '#ef4444'; hint.textContent = '✗ Passwords do not match';
+      document.getElementById('cpwd').classList.add('invalid');
+    }
+  }
+  document.getElementById('cpwd').addEventListener('input', checkConfirm);
+
+  // Copy payment detail
+  function copyPay(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied'; btn.style.color = '#22c55e';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1800);
+    });
+  }
+
+  // Validate a field — red border + shake if empty/invalid
+  function markField(el, ok) {
+    if (ok) {
+      el.classList.remove('invalid');
+    } else {
+      el.classList.add('invalid');
+      el.style.animation = 'none';
+      requestAnimationFrame(() => {
+        el.style.animation = 'shake .35s ease';
+      });
+    }
+    return ok;
+  }
+
+  // Open payment modal — with full validation gate
+  function goToPayment() {
+    let ok = true;
+
+    const uname   = document.getElementById('username');
+    const company = document.querySelector('[name=company]');
+    const email   = document.querySelector('[name=email]');
+    const pwd     = document.getElementById('pwd');
+    const cpwd    = document.getElementById('cpwd');
+
+    // Username
+    const unameVal = uname.value.trim();
+    if (!unameVal || unameVal.length < 3 || !/^[a-zA-Z0-9_]+$/.test(unameVal)) {
+      markField(uname, false);
+      const h = document.getElementById('uname-hint');
+      h.style.color = '#ef4444';
+      h.textContent = !unameVal ? 'Username is required' :
+                      unameVal.length < 3 ? 'At least 3 characters required' :
+                      'Only letters, numbers, underscores';
+      ok = false;
+    } else markField(uname, true);
+
+    // Company
+    if (!company.value.trim()) { markField(company, false); ok = false; }
+    else markField(company, true);
+
+    // Email
+    if (!email.value.trim() || !/^[^@]+@[^@]+\.[^@]+$/.test(email.value.trim())) {
+      markField(email, false); ok = false;
+    } else markField(email, true);
+
+    // Password
+    const pwdHint = document.getElementById('pwd-hint');
+    if (!pwd.value || pwd.value.length < 6) {
+      markField(pwd, false);
+      pwdHint.style.color = '#ef4444';
+      pwdHint.textContent = !pwd.value ? 'Password is required' : 'Min. 6 characters';
+      ok = false;
+    } else markField(pwd, true);
+
+    // Confirm password
+    const cpwdHint = document.getElementById('cpwd-hint');
+    if (!cpwd.value) {
+      markField(cpwd, false);
+      cpwdHint.style.color = '#ef4444';
+      cpwdHint.textContent = 'Please confirm your password';
+      ok = false;
+    } else if (pwd.value !== cpwd.value) {
+      markField(cpwd, false);
+      cpwdHint.style.color = '#ef4444';
+      cpwdHint.textContent = '✗ Passwords do not match';
+      ok = false;
+    } else markField(cpwd, true);
+
+    if (!ok) {
+      // Scroll to first invalid field
+      const firstInvalid = document.querySelector('.invalid');
+      if (firstInvalid) firstInvalid.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+
+    // All valid — open modal
+    const cb  = document.getElementById('payConfirmBox');
+    const btn = document.getElementById('finalRegisterBtn');
+    cb.checked   = false;
+    btn.disabled = true;
+    document.querySelector('#payConfirmLabel .pay-check-text').style.color = '#94a3b8';
+    btn.textContent = '✅ Complete Registration →';
+
+    document.getElementById('payModalOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Close payment modal
+  function closePayModal() {
+    document.getElementById('payModalOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Close when clicking dark backdrop (not the modal itself)
+  function overlayClose(e) {
+    if (e.target === document.getElementById('payModalOverlay')) closePayModal();
+  }
+
+  // Escape key closes modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closePayModal();
+  });
+
+  // Enable/disable the final register button based on checkbox
+  function toggleRegisterBtn() {
+    const checked = document.getElementById('payConfirmBox').checked;
+    const btn     = document.getElementById('finalRegisterBtn');
+    btn.disabled  = !checked;
+    document.querySelector('#payConfirmLabel .pay-check-text').style.color =
+      checked ? '#86efac' : '#94a3b8';
+  }
+
+  // Final registration submit (triggered from payment modal)
+  function submitRegistration() {
+    const pwd     = document.getElementById('pwd').value;
+    const cpwd    = document.getElementById('cpwd').value;
+    const uname   = document.getElementById('username').value.trim();
+    const company = document.querySelector('[name=company]').value.trim();
+    const email   = document.querySelector('[name=email]').value.trim();
+
+    if (!uname || !company || !email || !pwd) {
+      closePayModal();
+      setTimeout(() => {
+        document.querySelector('.card').scrollIntoView({behavior:'smooth', block:'start'});
+      }, 180);
+      return;
+    }
+    if (pwd !== cpwd) {
+      document.getElementById('cpwd').classList.add('invalid');
+      document.getElementById('cpwd-hint').textContent = '✗ Passwords do not match';
+      closePayModal();
+      setTimeout(() => {
+        document.getElementById('cpwd').scrollIntoView({behavior:'smooth', block:'center'});
+      }, 180);
+      return;
+    }
+    const btn = document.getElementById('finalRegisterBtn');
+    btn.textContent = '⏳ Submitting…'; btn.disabled = true;
+    document.getElementById('hiddenSubmitBtn').click();
+  }
+
+  // Original form submit guard (password match)
+  document.getElementById('regForm').addEventListener('submit', function(e) {
+    const pwd  = document.getElementById('pwd').value;
+    const cpwd = document.getElementById('cpwd').value;
+    if (pwd !== cpwd) {
+      e.preventDefault();
+      document.getElementById('cpwd').classList.add('invalid');
+      document.getElementById('cpwd-hint').textContent = '✗ Passwords do not match';
+      closePayModal();
+      setTimeout(() => {
+        document.getElementById('cpwd').scrollIntoView({behavior:'smooth', block:'center'});
+      }, 180);
+      const btn = document.getElementById('finalRegisterBtn');
+      if (btn) { btn.textContent = '✅ Complete Registration →'; btn.disabled = false; }
+    }
+  });
+</script>
+</body>
+</html>

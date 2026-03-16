@@ -11,14 +11,14 @@
       min-height: 100vh;
       display: flex;
       font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #07091a;
+      background: #000000;
       overflow: hidden;
     }
 
     /* ── LEFT PANEL ──────────────────────────────────────── */
     .left-panel {
       flex: 1;
-      background: linear-gradient(145deg, #07091a 0%, #0d1535 50%, #111d3e 100%);
+      background: linear-gradient(145deg, #000000 0%, #060a14 50%, #090d18 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -28,27 +28,35 @@
       overflow: hidden;
     }
 
-    /* Glow blobs */
+    /* Blue glow top-left, Gold glow bottom-right */
     .left-panel::before {
       content: '';
       position: absolute;
       width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(30,58,138,0.35) 0%, transparent 70%);
-      top: -100px; left: -100px;
+      background: radial-gradient(circle, rgba(30,90,200,0.18) 0%, transparent 70%);
+      top: -130px; left: -130px;
       pointer-events: none;
     }
     .left-panel::after {
       content: '';
       position: absolute;
-      width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(217,119,6,0.2) 0%, transparent 70%);
+      width: 420px; height: 420px;
+      background: radial-gradient(circle, rgba(245,158,11,0.14) 0%, transparent 70%);
       bottom: -80px; right: -80px;
       pointer-events: none;
       animation: pulse-glow 4s ease-in-out infinite alternate;
     }
     @keyframes pulse-glow {
-      from { opacity: .6; transform: scale(1); }
-      to   { opacity: 1;  transform: scale(1.1); }
+      from { opacity: .5; transform: scale(1); }
+      to   { opacity: 1;  transform: scale(1.12); }
+    }
+
+    /* Blue → Gold top strip */
+    .top-strip {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 25%, #f59e0b 65%, #fbbf24 100%);
     }
 
     /* ── Face-scan animation ─────────────────────────── */
@@ -59,40 +67,42 @@
       z-index: 2;
     }
 
-    /* Orbit ring */
+    /* Outer orbit — blue */
     .orbit {
       position: absolute; inset: 0;
       border-radius: 50%;
-      border: 1px dashed rgba(245,158,11,0.25);
+      border: 1px dashed rgba(59,130,246,0.35);
       animation: spin-slow 14s linear infinite;
     }
+    /* Inner orbit — gold */
     .orbit-2 {
       inset: 20px;
-      border: 1px dashed rgba(59,130,246,0.2);
+      border: 1px dashed rgba(245,158,11,0.3);
       animation: spin-slow 10s linear infinite reverse;
     }
     @keyframes spin-slow { to { transform: rotate(360deg); } }
 
-    /* Orbit dot */
+    /* Outer orbit dot — blue */
     .orbit::before {
       content: '';
       position: absolute;
       width: 8px; height: 8px;
-      background: #f59e0b;
+      background: #3b82f6;
       border-radius: 50%;
       top: -4px; left: 50%;
       transform: translateX(-50%);
-      box-shadow: 0 0 10px 3px rgba(245,158,11,0.6);
+      box-shadow: 0 0 12px 4px rgba(59,130,246,0.85);
     }
+    /* Inner orbit dot — gold */
     .orbit-2::before {
       content: '';
       position: absolute;
       width: 6px; height: 6px;
-      background: #60a5fa;
+      background: #f59e0b;
       border-radius: 50%;
       top: -3px; left: 50%;
       transform: translateX(-50%);
-      box-shadow: 0 0 8px 2px rgba(96,165,250,0.6);
+      box-shadow: 0 0 10px 3px rgba(245,158,11,0.8);
     }
 
     /* Face frame */
@@ -100,23 +110,23 @@
       position: absolute;
       inset: 30px;
       border-radius: 50%;
-      background: rgba(15,22,50,0.7);
+      background: rgba(4,8,20,0.9);
+      border: 1px solid rgba(59,130,246,0.1);
       display: flex; align-items: center; justify-content: center;
       overflow: hidden;
     }
 
-    /* Face SVG */
     .face-svg { width: 110px; height: 110px; }
 
-    /* Scan line */
+    /* Scan line — blue to gold */
     .scan-line {
       position: absolute;
       left: 30px; right: 30px;
       height: 2px;
-      background: linear-gradient(90deg, transparent 0%, #f59e0b 40%, #fbbf24 60%, transparent 100%);
+      background: linear-gradient(90deg, transparent, #1d4ed8 20%, #3b82f6 40%, #f59e0b 65%, #fbbf24 80%, transparent);
       border-radius: 2px;
       animation: scan 2.8s ease-in-out infinite;
-      box-shadow: 0 0 10px 3px rgba(245,158,11,0.4);
+      box-shadow: 0 0 10px 3px rgba(59,130,246,0.45);
       top: 30px;
     }
     @keyframes scan {
@@ -126,28 +136,27 @@
       100% { top: 230px; opacity: 0; }
     }
 
-    /* Corner brackets */
+    /* Corner brackets — top: blue, bottom: gold */
     .corner {
       position: absolute;
-      width: 22px; height: 22px;
-      border-color: #f59e0b;
+      width: 24px; height: 24px;
       border-style: solid;
-      opacity: .85;
+      opacity: .95;
     }
-    .c-tl { top: 28px;  left: 28px;  border-width: 2.5px 0 0 2.5px; }
-    .c-tr { top: 28px;  right: 28px; border-width: 2.5px 2.5px 0 0; }
-    .c-bl { bottom: 28px; left: 28px;  border-width: 0 0 2.5px 2.5px; }
-    .c-br { bottom: 28px; right: 28px; border-width: 0 2.5px 2.5px 0; }
+    .c-tl { top: 28px;  left: 28px;  border-color: #3b82f6; border-width: 2.5px 0 0 2.5px; }
+    .c-tr { top: 28px;  right: 28px; border-color: #3b82f6; border-width: 2.5px 2.5px 0 0; }
+    .c-bl { bottom: 28px; left: 28px;  border-color: #f59e0b; border-width: 0 0 2.5px 2.5px; }
+    .c-br { bottom: 28px; right: 28px; border-color: #f59e0b; border-width: 0 2.5px 2.5px 0; }
 
-    /* Dot nodes around face */
+    /* Dot nodes — alternating blue & gold */
     .dot-node {
       position: absolute;
       width: 7px; height: 7px;
-      background: #60a5fa;
       border-radius: 50%;
-      box-shadow: 0 0 8px 2px rgba(96,165,250,0.5);
       animation: blink 2s ease-in-out infinite;
     }
+    .dn-blue { background: #3b82f6; box-shadow: 0 0 8px 3px rgba(59,130,246,0.7); }
+    .dn-gold { background: #f59e0b; box-shadow: 0 0 8px 3px rgba(245,158,11,0.7); }
     .dn1 { top: 42px;  left: 50%;  animation-delay: 0s; }
     .dn2 { top: 80px;  left: 35px; animation-delay: .3s; }
     .dn3 { top: 80px;  right: 35px; animation-delay: .6s; }
@@ -155,22 +164,23 @@
     .dn5 { top: 120px; right: 30px; animation-delay: 1.2s; }
     .dn6 { top: 170px; left: 50%;  animation-delay: 1.5s; }
     @keyframes blink {
-      0%,100% { opacity: .3; transform: scale(.8); }
-      50%      { opacity: 1;  transform: scale(1.2); }
+      0%,100% { opacity: .25; transform: scale(.8); }
+      50%      { opacity: 1;   transform: scale(1.3); }
     }
 
-    /* Photo thumbnails floating */
+    /* Photo thumbnails */
     .thumb {
       position: absolute;
       width: 44px; height: 44px;
-      background: rgba(15,22,50,0.9);
-      border: 1.5px solid rgba(245,158,11,0.3);
+      background: #080808;
       border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
       font-size: 18px;
       animation: float-thumb 4s ease-in-out infinite;
       z-index: 3;
     }
+    .thumb.t-blue { border: 1.5px solid rgba(59,130,246,0.3); }
+    .thumb.t-gold  { border: 1.5px solid rgba(245,158,11,0.3); }
     .th1 { top: 10px;  left: -55px; animation-delay: 0s; }
     .th2 { top: 90px;  left: -68px; animation-delay: .7s; }
     .th3 { bottom: 10px; left: -55px; animation-delay: 1.4s; }
@@ -178,16 +188,16 @@
     .th5 { top: 90px;  right: -68px; animation-delay: 2.8s; }
     .th6 { bottom: 10px; right: -55px; animation-delay: 3.5s; }
     @keyframes float-thumb {
-      0%,100% { transform: translateY(0); border-color: rgba(245,158,11,0.3); }
-      50%      { transform: translateY(-7px); border-color: rgba(245,158,11,0.8); box-shadow: 0 6px 20px rgba(245,158,11,0.2); }
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); box-shadow: 0 8px 22px rgba(59,130,246,0.18); }
     }
 
-    /* Match pulse */
+    /* Match pulse — blue */
     .match-pulse {
       position: absolute;
       inset: 24px;
       border-radius: 50%;
-      border: 2px solid rgba(34,197,94,0.4);
+      border: 2px solid rgba(59,130,246,0.4);
       animation: match 3s ease-in-out infinite;
     }
     @keyframes match {
@@ -199,37 +209,38 @@
     /* ── Left text ─────────────────────────────────── */
     .left-text { text-align: center; z-index: 2; }
     .left-text h2 {
-      font-size: 1.65rem; font-weight: 800; color: #f1f5f9;
+      font-size: 1.65rem; font-weight: 800; color: #f0f4ff;
       line-height: 1.2; margin-bottom: 10px;
     }
     .left-text h2 em {
       font-style: normal;
-      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      background: linear-gradient(90deg, #3b82f6, #60a5fa, #f59e0b, #fbbf24);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
     }
     .left-text p {
-      color: #64748b; font-size: .88rem; line-height: 1.6;
+      color: #2a3448; font-size: .88rem; line-height: 1.6;
       max-width: 320px; margin: 0 auto 28px;
     }
 
     .features { display: flex; flex-direction: column; gap: 12px; z-index: 2; }
     .feat {
       display: flex; align-items: center; gap: 12px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.07);
+      background: rgba(59,130,246,0.05);
+      border: 1px solid rgba(59,130,246,0.1);
+      border-left: 2px solid #f59e0b;
       border-radius: 12px; padding: 11px 16px;
-      color: #94a3b8; font-size: .82rem;
+      color: #3a4a62; font-size: .82rem;
     }
     .feat .fi { font-size: 20px; }
-    .feat strong { color: #cbd5e1; font-size: .85rem; display: block; }
+    .feat strong { color: #5a8ac0; font-size: .85rem; display: block; }
 
     /* ── RIGHT PANEL ─────────────────────────────────────── */
     .right-panel {
       width: 460px;
       min-width: 380px;
-      background: rgba(10,14,31,0.95);
-      border-left: 1px solid rgba(245,158,11,0.08);
+      background: #050810;
+      border-left: 1px solid rgba(59,130,246,0.1);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -237,35 +248,54 @@
       position: relative;
       z-index: 10;
     }
+    /* Blue → Gold top bar on right panel */
+    .right-panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #1d4ed8, #3b82f6 40%, #f59e0b 70%, #fbbf24 100%);
+    }
 
     .login-box { width: 100%; }
 
     /* Brand */
-    .brand { text-align: center; margin-bottom: 32px; }
+    .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+    .brand-logo-wrap {
+      flex-shrink: 0;
+      background: #fff;
+      border-radius: 12px;
+      padding: 6px 10px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.2), 0 4px 20px rgba(245,158,11,0.2);
+    }
     .brand-logo {
-      width: 72px; height: 72px;
-      object-fit: contain; margin-bottom: 12px;
-      filter: drop-shadow(0 4px 20px rgba(217,119,6,0.4));
+      height: 48px; width: auto; max-width: 110px;
+      object-fit: contain; display: block;
     }
     .brand-name {
-      color: #f1f5f9; font-size: 1.1rem; font-weight: 800;
+      color: #f0f4ff; font-size: 1.1rem; font-weight: 800;
       line-height: 1.2;
     }
     .brand-name span {
       display: block;
-      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      background: linear-gradient(90deg, #3b82f6, #60a5fa, #f59e0b);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
     }
     .brand-sub {
-      color: #475569; font-size: .73rem; margin-top: 5px;
+      color: #1e2a40; font-size: .73rem; margin-top: 5px;
       text-transform: uppercase; letter-spacing: .06em;
     }
 
-    .divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(245,158,11,0.15), transparent); margin: 0 0 28px; }
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(59,130,246,0.2), rgba(245,158,11,0.2), transparent);
+      margin: 0 0 28px;
+    }
 
     label {
-      display: block; color: #64748b;
+      display: block; color: #2a3a55;
       font-size: .73rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: .08em;
       margin-bottom: 6px;
@@ -273,143 +303,161 @@
     input[type="text"], input[type="password"] {
       width: 100%;
       padding: 12px 16px;
-      background: rgba(7,9,26,0.8);
-      border: 1px solid rgba(255,255,255,0.06);
+      background: #080c18;
+      border: 1px solid rgba(59,130,246,0.1);
       border-radius: 10px;
-      color: #f1f5f9; font-size: .95rem;
+      color: #e8eeff; font-size: .95rem;
       outline: none;
       transition: border-color .2s, box-shadow .2s;
       margin-bottom: 18px;
     }
     input:focus {
-      border-color: #f59e0b;
-      box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
     }
-    input::placeholder { color: #1e293b; }
+    input::placeholder { color: #141c2e; }
 
+    /* Button — blue to gold gradient */
     .btn {
       width: 100%; padding: 13px;
-      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6 40%, #f59e0b 75%, #fbbf24 100%);
       border: none; border-radius: 10px;
-      color: #0a0e1f; font-size: 1rem; font-weight: 700;
+      color: #fff; font-size: 1rem; font-weight: 800;
       cursor: pointer;
-      transition: opacity .2s, transform .1s;
-      letter-spacing: .02em;
+      transition: opacity .2s, transform .1s, box-shadow .2s;
+      letter-spacing: .04em;
+      box-shadow: 0 4px 22px rgba(59,130,246,0.3), 0 4px 22px rgba(245,158,11,0.15);
     }
-    .btn:hover  { opacity: .88; }
+    .btn:hover  { opacity: .9; box-shadow: 0 6px 32px rgba(59,130,246,0.5), 0 4px 24px rgba(245,158,11,0.3); }
     .btn:active { transform: scale(.98); }
 
     .error-box {
-      background: rgba(239,68,68,.1);
-      border: 1px solid rgba(239,68,68,.25);
+      background: rgba(239,68,68,.08);
+      border: 1px solid rgba(239,68,68,.2);
       color: #fca5a5;
       padding: 10px 14px; border-radius: 8px;
       font-size: .84rem; margin-bottom: 18px;
       display: flex; align-items: center; gap: 8px;
     }
 
+    .register-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; margin-top: 16px;
+      color: #2a3a55; font-size: .82rem;
+    }
+    .btn-register {
+      padding: 7px 18px;
+      background: transparent;
+      border: 1px solid rgba(59,130,246,0.35);
+      border-radius: 8px;
+      color: #60a5fa; font-size: .82rem; font-weight: 600;
+      text-decoration: none;
+      transition: background .2s, border-color .2s;
+    }
+    .btn-register:hover {
+      background: rgba(59,130,246,0.1);
+      border-color: #3b82f6;
+      color: #93c5fd;
+    }
+
     .footer-hint {
-      text-align: center; color: #1e293b;
+      text-align: center; color: #141c2e;
       font-size: .72rem; margin-top: 24px;
       padding-top: 18px;
-      border-top: 1px solid rgba(255,255,255,0.04);
+      border-top: 1px solid rgba(59,130,246,0.06);
     }
-    .footer-hint strong { color: #334155; }
+    .footer-hint strong { color: #1e2a40; }
 
     /* ── Responsive ──────────────────────────────────────── */
     @media (max-width: 820px) {
       body { flex-direction: column; overflow: auto; }
-      .left-panel {
-        padding: 36px 24px 28px;
-        min-height: auto;
-        flex: none;
-      }
+      .left-panel { padding: 36px 24px 28px; min-height: auto; flex: none; }
       .scan-wrap { width: 200px; height: 200px; margin-bottom: 24px; }
       .th1,.th2,.th3,.th4,.th5,.th6 { display: none; }
-      .right-panel { width: 100%; min-width: unset; border-left: none; border-top: 1px solid rgba(245,158,11,0.08); }
+      .right-panel { width: 100%; min-width: unset; border-left: none; border-top: 1px solid rgba(59,130,246,0.1); }
     }
   </style>
 </head>
 <body>
 
+<!-- ─── Page Loader ─────────────────────────────── -->
+<div id="pgLoader"><div class="pg-spin"></div></div>
+<style>
+  #pgLoader{position:fixed;inset:0;z-index:99999;background:#000010;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,visibility .45s ease;}
+  #pgLoader.done{opacity:0;visibility:hidden;pointer-events:none;}
+  .pg-spin{width:56px;height:56px;border-radius:50%;border:4px solid rgba(255,255,255,0.07);border-top:4px solid #3b82f6;border-right:4px solid #f59e0b;animation:pgSpin .75s linear infinite;}
+  @keyframes pgSpin{to{transform:rotate(360deg);}}
+</style>
+<script>(function(){var L=document.getElementById('pgLoader');function h(){L.classList.add('done');}window.addEventListener('load',h);window.addEventListener('pageshow',function(e){if(e.persisted)h();});setTimeout(h,6000);})();</script>
+
+
   <!-- ── LEFT PANEL ─────────────────────────────────────── -->
   <div class="left-panel">
+    <div class="top-strip"></div>
 
-    <!-- Face scan animation -->
     <div class="scan-wrap">
       <div class="orbit"></div>
       <div class="orbit orbit-2"></div>
       <div class="match-pulse"></div>
 
-      <!-- Corner brackets -->
+      <!-- Top corners blue, bottom corners gold -->
       <div class="corner c-tl"></div>
       <div class="corner c-tr"></div>
       <div class="corner c-bl"></div>
       <div class="corner c-br"></div>
 
-      <!-- Face with scan line -->
       <div class="face-frame">
         <svg class="face-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Head shape -->
-          <ellipse cx="60" cy="56" rx="36" ry="42" fill="rgba(30,58,138,0.25)" stroke="rgba(245,158,11,0.4)" stroke-width="1.5"/>
-          <!-- Eyes -->
-          <ellipse cx="46" cy="50" rx="6" ry="7" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1.2"/>
-          <ellipse cx="74" cy="50" rx="6" ry="7" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1.2"/>
-          <circle cx="46" cy="50" r="3" fill="#f59e0b" opacity=".7"/>
-          <circle cx="74" cy="50" r="3" fill="#f59e0b" opacity=".7"/>
-          <!-- Nose -->
+          <ellipse cx="60" cy="56" rx="36" ry="42" fill="rgba(5,15,40,0.7)" stroke="rgba(59,130,246,0.45)" stroke-width="1.5"/>
+          <!-- Eyes — blue outer, gold pupil -->
+          <ellipse cx="46" cy="50" rx="6" ry="7" fill="rgba(59,130,246,0.1)" stroke="#3b82f6" stroke-width="1.2"/>
+          <ellipse cx="74" cy="50" rx="6" ry="7" fill="rgba(59,130,246,0.1)" stroke="#3b82f6" stroke-width="1.2"/>
+          <circle cx="46" cy="50" r="3" fill="#f59e0b" opacity=".9"/>
+          <circle cx="74" cy="50" r="3" fill="#f59e0b" opacity=".9"/>
+          <!-- Nose — gold -->
           <path d="M60 56 L55 68 Q60 71 65 68 Z" stroke="rgba(245,158,11,0.5)" stroke-width="1" fill="none"/>
-          <!-- Mouth -->
-          <path d="M48 78 Q60 86 72 78" stroke="#f59e0b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-          <!-- Eyebrows -->
-          <path d="M39 43 Q46 39 53 42" stroke="rgba(245,158,11,0.6)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          <path d="M67 42 Q74 39 81 43" stroke="rgba(245,158,11,0.6)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          <!-- Ear lines -->
-          <path d="M24 54 Q20 56 22 62 Q24 68 26 64" stroke="rgba(245,158,11,0.3)" stroke-width="1" fill="none"/>
-          <path d="M96 54 Q100 56 98 62 Q96 68 94 64" stroke="rgba(245,158,11,0.3)" stroke-width="1" fill="none"/>
+          <!-- Mouth — blue -->
+          <path d="M48 78 Q60 86 72 78" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <!-- Eyebrows — gold -->
+          <path d="M39 43 Q46 39 53 42" stroke="rgba(245,158,11,0.7)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M67 42 Q74 39 81 43" stroke="rgba(245,158,11,0.7)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <!-- Ears — blue -->
+          <path d="M24 54 Q20 56 22 62 Q24 68 26 64" stroke="rgba(59,130,246,0.3)" stroke-width="1" fill="none"/>
+          <path d="M96 54 Q100 56 98 62 Q96 68 94 64" stroke="rgba(59,130,246,0.3)" stroke-width="1" fill="none"/>
+          <!-- Eye sparkle -->
+          <circle cx="49" cy="47" r="1.2" fill="#fff" opacity=".8"/>
+          <circle cx="77" cy="47" r="1.2" fill="#fff" opacity=".8"/>
         </svg>
       </div>
 
-      <!-- Scan line -->
       <div class="scan-line"></div>
 
-      <!-- Landmark dots -->
-      <div class="dot-node dn1"></div>
-      <div class="dot-node dn2"></div>
-      <div class="dot-node dn3"></div>
-      <div class="dot-node dn4"></div>
-      <div class="dot-node dn5"></div>
-      <div class="dot-node dn6"></div>
+      <!-- Alternating blue/gold dot nodes -->
+      <div class="dot-node dn-blue dn1"></div>
+      <div class="dot-node dn-gold dn2"></div>
+      <div class="dot-node dn-blue dn3"></div>
+      <div class="dot-node dn-gold dn4"></div>
+      <div class="dot-node dn-blue dn5"></div>
+      <div class="dot-node dn-gold dn6"></div>
 
-      <!-- Photo thumbnails -->
-      <div class="thumb th1">🖼</div>
-      <div class="thumb th2">📷</div>
-      <div class="thumb th3">🤳</div>
-      <div class="thumb th4">📸</div>
-      <div class="thumb th5">🖼</div>
-      <div class="thumb th6">📷</div>
+      <!-- Alternating blue/gold thumb borders -->
+      <div class="thumb t-blue th1">🖼</div>
+      <div class="thumb t-gold th2">📷</div>
+      <div class="thumb t-blue th3">🤳</div>
+      <div class="thumb t-gold th4">📸</div>
+      <div class="thumb t-blue th5">🖼</div>
+      <div class="thumb t-gold th6">📷</div>
     </div>
 
-    <!-- Text below animation -->
     <div class="left-text">
       <h2>Find Your Photos <em>Instantly</em></h2>
       <p>AI-powered face recognition finds every photo of you from any event in seconds.</p>
     </div>
 
-    <!-- Feature bullets -->
     <div class="features">
-      <div class="feat">
-        <span class="fi">🤳</span>
-        <div><strong>Upload a Selfie</strong>Our AI scans your face</div>
-      </div>
-      <div class="feat">
-        <span class="fi">🔍</span>
-        <div><strong>Face Recognition</strong>Matches across all event photos</div>
-      </div>
-      <div class="feat">
-        <span class="fi">⬇</span>
-        <div><strong>Download or Email</strong>Get your photos instantly</div>
-      </div>
+      <div class="feat"><span class="fi">🤳</span><div><strong>Upload a Selfie</strong>Our AI scans your face</div></div>
+      <div class="feat"><span class="fi">🔍</span><div><strong>Face Recognition</strong>Matches across all event photos</div></div>
+      <div class="feat"><span class="fi">⬇</span><div><strong>Download or Email</strong>Get your photos instantly</div></div>
     </div>
 
   </div>
@@ -419,11 +467,13 @@
     <div class="login-box">
 
       <div class="brand">
-        <img src="/static/logo.png" alt="Zayron Infotech" class="brand-logo">
-        <div class="brand-name">
-          Zayron Infotech<span>Pvt. Ltd.</span>
+        <div class="brand-logo-wrap">
+          <img src="/static/logo.png" alt="Zayron Infotech" class="brand-logo">
         </div>
-        <p class="brand-sub">PhotoFinder — Admin Portal</p>
+        <div>
+          <div class="brand-name">Zayron Infotech<span>Pvt. Ltd.</span></div>
+          <p class="brand-sub" style="margin:4px 0 0;">PhotoFinder — Admin Portal</p>
+        </div>
       </div>
 
       <div class="divider"></div>
@@ -443,6 +493,11 @@
 
         <button class="btn" type="submit">Sign In →</button>
       </form>
+
+      <div class="register-row">
+        <span>New here?</span>
+        <a href="/admin/register" class="btn-register">Create Account</a>
+      </div>
 
       <p class="footer-hint">
         Authorized personnel only &bull; <strong>Zayron Infotech Pvt. Ltd.</strong>
