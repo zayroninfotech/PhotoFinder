@@ -120,10 +120,14 @@ SUBSCRIPTION_PLANS = [
 ]
 VALID_PLAN_DAYS = {p["days"] for p in SUBSCRIPTION_PLANS}
 
-# Run one-time JSON→MongoDB migration on startup
+# Run one-time JSON->MongoDB migration on startup, then bootstrap superadmin
 with app.app_context():
     try:
         migrate_json_to_mongo()
+    except Exception:
+        pass
+    try:
+        _ensure_superadmin_exists()
     except Exception:
         pass
 
@@ -259,9 +263,46 @@ def migrate_json_to_mongo():
                 col.insert_one({**user, "id": uid})
                 migrated += 1
         if migrated:
-            print(f"[INFO] Migrated {migrated} users from JSON → MongoDB")
+            print(f"[INFO] Migrated {migrated} users from JSON -> MongoDB")
     except Exception as e:
         print(f"[WARN] Migration error: {e}")
+
+
+def _ensure_superadmin_exists():
+    """Auto-create the default superadmin MongoDB record on first run."""
+    col = _ucol()
+    if col is None:
+        return  # MongoDB not available; superadmin uses config.py only
+    if col.find_one({"id": "superadmin"}):
+        return  # already exists
+    try:
+        sa = {
+            "_id":               "superadmin",
+            "id":                "superadmin",
+            "username":          config.ADMIN_USERNAME,
+            "password":          generate_password_hash(config.ADMIN_PASSWORD),
+            "email":             "",
+            "company":           "Zayron Infotech Pvt. Ltd.",
+            "phone":             "",
+            "is_active":         True,
+            "role":              "superadmin",
+            "subscription_end":  "2126-01-01",
+            "subscription_days": 36500,
+            "payment_status":    "approved",
+            "force_logout":      False,
+            "created_at":        datetime.utcnow().isoformat(),
+        }
+        col.insert_one(sa)
+        try:
+            print(f"[INFO] Superadmin bootstrapped: {config.ADMIN_USERNAME}")
+        except Exception:
+            pass
+    except Exception as e:
+        try:
+            print(f"[WARN] Could not bootstrap superadmin: {e}")
+        except Exception:
+            pass
+
 
 def is_subscription_active(user: dict) -> bool:
     if not user.get("is_active", False):

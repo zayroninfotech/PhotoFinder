@@ -443,6 +443,32 @@
     .ps-status.ok  { color:#22c55e; }
     .ps-status.err { color:#ef4444; }
 
+    /* User Activity section */
+    .ua-block {
+      margin-bottom: 32px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .ua-header {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--card); padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap; gap: 8px;
+    }
+    .ua-header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .ua-username {
+      font-weight: 800; font-size: .92rem; color: var(--text);
+    }
+    .ua-company { color: #60a5fa; font-size: .76rem; }
+    .ua-body { padding: 16px 20px; background: var(--panel); }
+    .ua-meta-row {
+      display: flex; gap: 14px; flex-wrap: wrap;
+      font-size: .72rem; color: var(--muted); margin-bottom: 14px;
+    }
+    .ua-meta-row span strong { color: var(--sub); }
+    .ua-no-events { color: var(--muted); font-size: .82rem; padding: 10px 0; }
+
     @media (max-width:900px) {
       .stats-bar { grid-template-columns:repeat(2,1fr); }
       .page { padding:16px; }
@@ -509,30 +535,30 @@
   <!-- Tab navigation -->
   <div class="tab-nav">
     <button class="tab-btn active" id="tab-btn-users" onclick="switchTab('users')">
-      👥 Users &amp; Subscriptions
+      👥 User Management
     </button>
     <button class="tab-btn" id="tab-btn-events" onclick="switchTab('events')">
-      📸 Events
+      📊 User Activity
     </button>
     <button class="tab-btn tab-pay" id="tab-btn-payment" onclick="switchTab('payment')">
       💳 Payment Settings
     </button>
   </div>
 
-  <!-- ══ TAB: USERS ══════════════════════════════════════════════════ -->
+  <!-- ══ TAB: USER MANAGEMENT ══════════════════════════════════════ -->
   <div class="tab-panel active" id="panel-users">
   <div class="users-section">
     <div class="sec-title" style="justify-content:space-between; flex-wrap:wrap; gap:10px;">
       <span style="display:flex;align-items:center;gap:8px;">
-        👥 Registered Users &amp; Subscriptions
-        <span style="font-size:.68rem;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">({{ users|length }} total)</span>
+        👥 User Management &amp; Subscriptions
+        <span style="font-size:.68rem;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">({{ users|length }} registered)</span>
       </span>
       <button onclick="document.getElementById('createUserModal').classList.add('show')"
               style="padding:7px 18px; background:linear-gradient(135deg,#1d4ed8,#3b82f6);
                      border:none; border-radius:8px; color:#fff; font-size:.78rem;
                      font-weight:700; cursor:pointer; letter-spacing:.02em; font-family:inherit;
                      box-shadow:0 2px 12px rgba(59,130,246,.3);">
-        + Create User
+        ➕ Create New User
       </button>
     </div>
 
@@ -696,79 +722,99 @@
   </div>{# end users-section #}
   </div>{# end panel-users #}
 
-  <!-- ══ TAB: EVENTS ════════════════════════════════════════════════ -->
+  <!-- ══ TAB: USER ACTIVITY ════════════════════════════════════════ -->
   <div class="tab-panel" id="panel-events">
-  <div class="events-section">
-    <div class="sec-title">📸 All Events ({{ all_events|length }})</div>
+  <div class="sec-title">📊 User Activity — Events &amp; QR History by User ({{ all_events|length }} total events)</div>
 
-    {% if all_events %}
-    <div class="events-grid">
-      {% for ev in all_events %}
-      <div class="ev-card">
+    {% if users %}
+      {% set ns = namespace(has_any=false) %}
+      {% for uid, u in users.items() %}
+        {% set user_events = all_events | selectattr('owner_id','equalto',uid) | list %}
+        {% set ns.has_any = true %}
 
-        <!-- QR + Info row -->
-        <div class="ev-card-top">
-          <!-- QR thumbnail — click to enlarge -->
-          <div class="ev-qr-box" onclick="showQR('/qr/{{ ev.id }}', '{{ ev.name }}')">
-            <img src="/qr/{{ ev.id }}" alt="QR" loading="lazy">
-            <div class="qr-hover-label">🔍 View</div>
+      <div class="ua-block">
+        <!-- User header -->
+        <div class="ua-header">
+          <div class="ua-header-left">
+            <span class="ua-username">{{ u.username }}</span>
+            <span class="ua-company">{{ u.company }}</span>
+            {% if u.is_sub_active %}
+              <span class="badge badge-active" style="font-size:.62rem;padding:2px 8px;">● Active</span>
+            {% elif u.payment_status == 'pending' %}
+              <span class="badge badge-pending" style="font-size:.62rem;padding:2px 8px;">⏳ Pending</span>
+            {% else %}
+              <span class="badge badge-inactive" style="font-size:.62rem;padding:2px 8px;">○ Inactive</span>
+            {% endif %}
           </div>
+          <div style="display:flex;gap:16px;font-size:.72rem;color:var(--muted);">
+            <span>📸 <strong style="color:var(--sub);">{{ user_events|length }}</strong> event{{ 's' if user_events|length != 1 else '' }}</span>
+            <span>🕒 Last: <strong style="color:var(--sub);">{{ u.last_event }}</strong></span>
+            <span>📅 Joined: <strong style="color:var(--sub);">{{ u.created_at[:10] if u.created_at else '—' }}</strong></span>
+          </div>
+        </div>
 
-          <!-- Event details -->
-          <div class="ev-info">
-            <div>
-              <div class="ev-name">{{ ev.name }}</div>
-              <div class="ev-owner">👤 {{ ev.owner_name or 'Superadmin' }}</div>
-            </div>
-            <div class="ev-meta">
-              <div class="ev-meta-row">
-                Status:&nbsp;
-                <span class="ev-status-{{ ev.status }}">
-                  {% if ev.status == 'ready' %}✓ Ready
-                  {% elif ev.status == 'processing' %}⏳ Processing
-                  {% elif ev.status == 'error' %}✗ Error
-                  {% else %}{{ ev.status }}{% endif %}
-                </span>
+        <!-- User's events -->
+        <div class="ua-body">
+          {% if user_events %}
+          <div class="events-grid">
+            {% for ev in user_events %}
+            <div class="ev-card">
+              <div class="ev-card-top">
+                <div class="ev-qr-box" onclick="showQR('/qr/{{ ev.id }}', '{{ ev.name }}')">
+                  <img src="/qr/{{ ev.id }}" alt="QR" loading="lazy">
+                  <div class="qr-hover-label">🔍 View</div>
+                </div>
+                <div class="ev-info">
+                  <div>
+                    <div class="ev-name">{{ ev.name }}</div>
+                  </div>
+                  <div class="ev-meta">
+                    <div class="ev-meta-row">
+                      Status:&nbsp;
+                      <span class="ev-status-{{ ev.status }}">
+                        {% if ev.status == 'ready' %}✓ Ready
+                        {% elif ev.status == 'processing' %}⏳ Processing
+                        {% elif ev.status == 'error' %}✗ Error
+                        {% else %}{{ ev.status }}{% endif %}
+                      </span>
+                    </div>
+                    <div class="ev-meta-row">Photos: <strong>{{ ev.photo_count or 0 }}</strong></div>
+                    <div class="ev-meta-row">Created: <strong>{{ ev.created_at[:10] if ev.created_at else '—' }}</strong></div>
+                  </div>
+                </div>
               </div>
-              <div class="ev-meta-row">Photos: <strong>{{ ev.photo_count or 0 }}</strong></div>
-              <div class="ev-meta-row">Created: <strong>{{ ev.created_at[:10] if ev.created_at else '—' }}</strong></div>
+              <div style="padding:8px 14px;border-top:1px solid var(--border);background:rgba(59,130,246,0.03);">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:.68rem;color:var(--muted);flex-shrink:0;">🔗</span>
+                  <input type="text" value="{{ ev.user_url }}" readonly
+                         style="flex:1;background:transparent;border:none;outline:none;
+                                color:#60a5fa;font-size:.68rem;cursor:pointer;font-family:monospace;"
+                         onclick="this.select()">
+                  <button onclick="copyLink('{{ ev.user_url }}',this)"
+                          style="flex-shrink:0;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);
+                                 color:#60a5fa;border-radius:6px;padding:3px 10px;
+                                 font-size:.65rem;font-weight:700;cursor:pointer;font-family:inherit;">Copy</button>
+                </div>
+              </div>
+              <div class="ev-card-btns">
+                <a href="{{ ev.user_url }}" target="_blank">🌐 Open</a>
+                <a href="/qr/{{ ev.id }}/download">⬇ QR</a>
+                <button onclick="printQR('{{ ev.id }}','{{ ev.name }}')">🖨 Print</button>
+              </div>
             </div>
+            {% endfor %}
           </div>
-        </div>
-
-        <!-- User link bar -->
-        <div style="padding:8px 14px; border-top:1px solid var(--border); background:rgba(59,130,246,0.03);">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:.68rem; color:var(--muted); flex-shrink:0;">🔗 Link:</span>
-            <input type="text" value="{{ ev.user_url }}" readonly
-                   id="link-{{ ev.id }}"
-                   style="flex:1; background:transparent; border:none; outline:none;
-                          color:#60a5fa; font-size:.7rem; cursor:pointer; font-family:monospace;"
-                   onclick="this.select()">
-            <button onclick="copyLink('{{ ev.user_url }}', this)"
-                    style="flex-shrink:0; background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.25);
-                           color:#60a5fa; border-radius:6px; padding:3px 10px;
-                           font-size:.68rem; font-weight:700; cursor:pointer; font-family:inherit;">
-              Copy
-            </button>
-          </div>
-        </div>
-
-        <!-- Action buttons -->
-        <div class="ev-card-btns">
-          <a href="{{ ev.user_url }}" target="_blank">🌐 Open</a>
-          <a href="/qr/{{ ev.id }}/download">⬇ QR</a>
-          <button onclick="printQR('{{ ev.id }}', '{{ ev.name }}')">🖨 Print</button>
+          {% else %}
+          <div class="ua-no-events">No events created yet by this user.</div>
+          {% endif %}
         </div>
       </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty">No events created yet.</div>
-    {% endif %}
-  </div>
 
-  </div>{# end events-section #}
+      {% endfor %}
+    {% else %}
+    <div class="empty">No registered users yet.</div>
+    {% endif %}
+
   </div>{# end panel-events #}
 
   <!-- ══ TAB: PAYMENT ═══════════════════════════════════════════════ -->
