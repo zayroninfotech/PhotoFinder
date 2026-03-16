@@ -415,6 +415,8 @@ def admin_register():
             else:
                 users  = load_users()
                 new_id = uuid.uuid4().hex[:12]
+                today   = date.today()
+                end_dt  = today + timedelta(days=sub_days)
                 users[new_id] = {
                     "id":                 new_id,
                     "username":           form["username"],
@@ -423,15 +425,14 @@ def admin_register():
                     "company":            form["company"],
                     "phone":              form["phone"],
                     "subscription_days":  sub_days,
-                    "subscription_start": None,
-                    "subscription_end":   None,
-                    "is_active":          False,
-                    "payment_status":     "pending",
+                    "subscription_start": today.isoformat(),
+                    "subscription_end":   end_dt.isoformat(),
+                    "is_active":          True,
+                    "payment_status":     "paid",
                     "created_at":         datetime.now().isoformat(),
                 }
                 save_users(users)
-                success = (f"✅ Registration successful! Your account is pending activation. "
-                           f"The administrator will activate it after payment confirmation.")
+                success = f"✅ Registration successful! You can now log in."
                 form = {}
 
     return render_template("admin_register.html",
@@ -512,6 +513,27 @@ def superadmin_deactivate(user_id):
     if user_id not in users:
         return jsonify({"error": "User not found"}), 404
     users[user_id]["is_active"] = False
+    save_users(users)
+    return jsonify({"ok": True})
+
+
+@app.route("/superadmin/set-status/<user_id>", methods=["POST"])
+@_superadmin_required
+def superadmin_set_status(user_id):
+    users = load_users()
+    if user_id not in users:
+        return jsonify({"error": "User not found"}), 404
+    active = bool((request.json or {}).get("active", False))
+    u = users[user_id]
+    u["is_active"] = active
+    if active:
+        # If activating and no subscription dates set, start from today
+        if not u.get("subscription_start"):
+            today = date.today()
+            sub_days = u.get("subscription_days", 30)
+            u["subscription_start"] = today.isoformat()
+            u["subscription_end"]   = (today + timedelta(days=sub_days)).isoformat()
+        u["payment_status"] = "paid"
     save_users(users)
     return jsonify({"ok": True})
 

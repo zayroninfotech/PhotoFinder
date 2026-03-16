@@ -131,6 +131,24 @@
     .btn-delete    { border-color:rgba(100,116,139,.3); color:#64748b; }
     .btn-delete:hover    { background:rgba(100,116,139,.08); }
 
+    /* Status dropdown */
+    .status-select {
+      appearance: none; -webkit-appearance: none;
+      padding: 4px 28px 4px 10px;
+      border-radius: 7px; border: 1.5px solid rgba(59,130,246,.3);
+      background: rgba(59,130,246,.07) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2360a5fa'/%3E%3C/svg%3E") no-repeat right 8px center;
+      color: #60a5fa; font-size: .74rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: border-color .2s, background-color .2s;
+      min-width: 96px;
+    }
+    .status-select:focus { outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,.25); }
+    .status-select option { background: #080c18; color: #e8eeff; }
+    .sel-active   { border-color:rgba(34,197,94,.45); color:#22c55e;
+                    background-color:rgba(34,197,94,.07); }
+    .sel-inactive { border-color:rgba(100,116,139,.35); color:#94a3b8;
+                    background-color:rgba(100,116,139,.07); }
+
     /* Events grid */
     .events-grid {
       display: grid;
@@ -552,13 +570,11 @@
             </td>
             <td>
               <div class="actions">
-                {% if not u.is_sub_active %}
-                <button class="act-btn btn-activate"
-                        onclick="activateUser('{{ uid }}', '{{ u.username }}')">Activate</button>
-                {% else %}
-                <button class="act-btn btn-deactivate"
-                        onclick="deactivateUser('{{ uid }}', '{{ u.username }}')">Pause</button>
-                {% endif %}
+                <select class="status-select {% if u.is_sub_active %}sel-active{% else %}sel-inactive{% endif %}"
+                        onchange="setUserStatus('{{ uid }}', this.value, '{{ u.username }}', this)">
+                  <option value="active"   {% if u.is_sub_active %}selected{% endif %}>● Active</option>
+                  <option value="inactive" {% if not u.is_sub_active %}selected{% endif %}>○ Inactive</option>
+                </select>
                 <button class="act-btn btn-extend"
                         onclick="openExtend('{{ uid }}', '{{ u.username }}')">Extend</button>
                 <button class="act-btn btn-delete"
@@ -854,24 +870,40 @@
 
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-  // ── Activate ────────────────────────────────────────────────────────────────
-  function activateUser(uid, name) {
-    if (!confirm(`Activate subscription for "${name}"?`)) return;
-    fetch(`/superadmin/activate/${uid}`, {method:'POST'})
-      .then(r => r.json()).then(d => {
-        if (d.ok) { showToast(`✅ ${name} activated — ends ${d.end}`); setTimeout(()=>location.reload(),1500); }
-        else showToast('Error: ' + (d.error||'unknown'), false);
-      });
-  }
-
-  // ── Deactivate ──────────────────────────────────────────────────────────────
-  function deactivateUser(uid, name) {
-    if (!confirm(`Pause/deactivate "${name}"?`)) return;
-    fetch(`/superadmin/deactivate/${uid}`, {method:'POST'})
-      .then(r => r.json()).then(d => {
-        if (d.ok) { showToast(`⏸ ${name} deactivated`); setTimeout(()=>location.reload(),1500); }
-        else showToast('Error: ' + (d.error||'unknown'), false);
-      });
+  // ── Set Status (Active / Inactive dropdown) ─────────────────────────────────
+  function setUserStatus(uid, value, name, selectEl) {
+    const isActive = value === 'active';
+    fetch(`/superadmin/set-status/${uid}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({active: isActive})
+    }).then(r => r.json()).then(d => {
+      if (d.ok) {
+        showToast(isActive ? `✅ ${name} set to Active` : `⏸ ${name} set to Inactive`);
+        // Update dropdown colour class
+        selectEl.className = 'status-select ' + (isActive ? 'sel-active' : 'sel-inactive');
+        // Update status badge in the same row
+        const row = selectEl.closest('tr');
+        if (row) {
+          const badge = row.querySelector('.badge');
+          if (badge) {
+            if (isActive) {
+              badge.className = 'badge badge-active'; badge.textContent = '● Active';
+            } else {
+              badge.className = 'badge badge-inactive'; badge.textContent = '○ Inactive';
+            }
+          }
+        }
+      } else {
+        showToast('Error: ' + (d.error||'unknown'), false);
+        // Revert dropdown
+        selectEl.value = isActive ? 'inactive' : 'active';
+        selectEl.className = 'status-select ' + (isActive ? 'sel-inactive' : 'sel-active');
+      }
+    }).catch(() => {
+      showToast('Network error', false);
+      selectEl.value = isActive ? 'inactive' : 'active';
+    });
   }
 
   // ── Extend ──────────────────────────────────────────────────────────────────
