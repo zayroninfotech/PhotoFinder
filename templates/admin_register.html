@@ -244,7 +244,7 @@
   {% endif %}
 
   <div class="info-box">
-    <strong>How it works:</strong> Fill in your details below → Select your subscription plan → Create your account → You can start using PhotoFinder.
+    <strong>How it works:</strong> Fill in your details below → Create your account → Admin will activate your subscription → You can start using PhotoFinder.
   </div>
 
   <form method="POST" action="/admin/register" id="regForm" novalidate>
@@ -293,7 +293,8 @@
       </div>
     </div>
 
-    <input type="hidden" name="subscription_days" value="30">
+    <!-- subscription_days hidden field — commented out; superadmin sets plan after approval -->
+    <!-- <input type="hidden" name="subscription_days" value="30"> -->
 
     <div class="btn-row">
       <button type="submit" class="btn-submit" id="submitBtn">
@@ -313,12 +314,13 @@
 </div>{# end .page-wrap #}
 
 <script>
-  // ── Plan selection ──────────────────────────────────────────────────────────
+  /* ── Plan selection — COMMENTED OUT (superadmin activates plans, not on register)
   function selectPlan(days, el) {
     document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
     el.classList.add('selected');
     document.getElementById('sub_days').value = days;
   }
+  ── End plan selection ── */
 
   // ── Live username validation ────────────────────────────────────────────────
   document.getElementById('username').addEventListener('input', function() {

@@ -443,13 +443,14 @@
     {% else %}
     <span class="sub-chip sub-chip-expire">✗ Expired</span>
     {% endif %}
-    <!-- Always-visible Renew/Upgrade button -->
+    <!-- 💳 Renew Plan button — COMMENTED OUT (enable when Razorpay is live)
     <button onclick="openPlanModal(true)"
       style="padding:6px 14px; background:linear-gradient(135deg,#b45309,#f59e0b);
              border:none; border-radius:8px; color:#0a0e1f; font-size:.75rem;
              font-weight:800; cursor:pointer; letter-spacing:.3px; white-space:nowrap;">
       💳 Renew Plan
     </button>
+    -->
   </div>
 </div>
 {% endif %}
@@ -803,10 +804,16 @@
   ───────────────────────────────────────────────────── */
 </script>
 
-<!-- ── Razorpay CDN ── -->
+<!-- ══════════════════════════════════════════════════════════════════
+     RAZORPAY + SUBSCRIPTION POPUP — COMMENTED OUT
+     Enable this entire block when going live with Razorpay payments
+     ══════════════════════════════════════════════════════════════════ -->
+<!--
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+-->
 
-<!-- ── Plan Renewal Popup ── -->
+<!-- ── Plan Renewal Popup — COMMENTED OUT ── -->
+<!--
 <div id="planModal" style="display:none; position:fixed; inset:0; z-index:9000;
      background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
      align-items:center; justify-content:center;">
@@ -890,7 +897,7 @@
   var _subActive     = {{ 'true' if sub_active else 'false' }};
   var _rzpKey        = "{{ rzp_key or '' }}";
 
-  // Patch the Generate QR button to check subscription first
+  /* Generate QR button subscription check — COMMENTED OUT (Razorpay disabled)
   document.addEventListener('DOMContentLoaded', function() {
     var btn = document.getElementById('submitBtn');
     if (btn) {
@@ -904,6 +911,7 @@
       });
     }
   });
+  */
 
   function openPlanModal(isVoluntary) {
     const modal = document.getElementById('planModal');
@@ -1068,5 +1076,8 @@
     }
   }
 </script>
+-->
+<!-- ══ END OF COMMENTED-OUT RAZORPAY / SUBSCRIPTION BLOCK ══ -->
+
 </body>
 </html>
