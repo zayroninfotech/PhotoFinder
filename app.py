@@ -455,6 +455,57 @@ def build_encodings(event_dir: Path, status_path: Path):
     _save_meta(event_dir / "meta.json", meta)
     _set_status(status_path, "ready", f"Ready – {len(imgs)} photos indexed")
 
+def reindex_event_bg(event_id: str):
+    """Only download NEW photos and encode only new ones (keeps existing pkl cache)."""
+    event_dir   = EVENTS / event_id
+    images_dir  = event_dir / "images"
+    status_path = event_dir / "status.json"
+    meta        = _load_meta(event_dir / "meta.json")
+    folder_id   = meta.get("folder_id", "")
+    try:
+        # Snapshot existing files before download
+        before = {p.name for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS}
+        _set_status(status_path, "downloading", "Checking Drive for new photos…")
+        # Download only — gdown skips existing files automatically
+        try:
+            import gdown
+            url = "https://drive.google.com/drive/folders/" + folder_id
+            gdown.download_folder(url, output=str(images_dir), quiet=True, use_cookies=False)
+        except Exception:
+            file_list = list_drive_images(folder_id)
+            for item in file_list[:200]:
+                fid, name = item["id"], item["name"]
+                out = images_dir / name
+                if out.exists():          # skip already downloaded
+                    continue
+                try:
+                    dl_url = f"https://drive.google.com/uc?export=download&id={fid}"
+                    r = requests.get(dl_url, timeout=20, stream=True)
+                    if r.status_code == 200 and "image" in r.headers.get("Content-Type", ""):
+                        with open(out, "wb") as f:
+                            for chunk in r.iter_content(8192):
+                                f.write(chunk)
+                except Exception:
+                    pass
+        after = {p.name for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS}
+        new_count = len(after - before)
+        total     = len(after)
+        if new_count == 0:
+            _set_status(status_path, "ready", f"No new photos found – {total} photos indexed")
+            meta["status"] = "ready"
+            meta["photo_count"] = total
+            _save_meta(event_dir / "meta.json", meta)
+            return
+        # Only re-build encodings because new files arrived
+        # DeepFace detects new files and only encodes them (pkl cache kept)
+        _set_status(status_path, "indexing", f"Encoding {new_count} new photo(s)…")
+        build_encodings(event_dir, status_path)
+    except Exception as e:
+        _set_status(status_path, "error", str(e))
+        meta["status"] = "error"
+        _save_meta(event_dir / "meta.json", meta)
+
+
 def process_event_bg(event_id: str):
     event_dir   = EVENTS / event_id
     status_path = event_dir / "status.json"
@@ -1281,7 +1332,7 @@ def admin_add_photos(event_id):
 @app.route("/admin/reindex/<event_id>", methods=["POST"])
 @_admin_required
 def admin_reindex(event_id):
-    """Re-download photos from Drive and rebuild face encodings."""
+    """Re-download only NEW photos from Drive and encode only new ones."""
     event_dir  = EVENTS / event_id
     meta       = _load_meta(event_dir / "meta.json")
     folder_id  = meta.get("folder_id")
@@ -1289,13 +1340,11 @@ def admin_reindex(event_id):
         return jsonify({"error": "No Drive folder linked to this event"}), 400
     images_dir = event_dir / "images"
     images_dir.mkdir(exist_ok=True)
-    # Clear old encodings so DeepFace rebuilds fresh
-    for pkl in images_dir.glob("*.pkl"):
-        pkl.unlink()
     status_path = event_dir / "status.json"
     meta["status"] = "processing"
     _save_meta(event_dir / "meta.json", meta)
-    t = threading.Thread(target=process_event_bg, args=(event_id,), daemon=True)
+    # Do NOT delete .pkl files — DeepFace will only encode new photos
+    t = threading.Thread(target=reindex_event_bg, args=(event_id,), daemon=True)
     t.start()
     return jsonify({"ok": True, "message": "Re-indexing started"})
 
