@@ -557,18 +557,19 @@ def admin_register():
             error = "Passwords do not match."
         elif not re.match(r'^[^@]+@[^@]+\.[^@]+$', form["email"]):
             error = "Please enter a valid email address."
-        elif sub_days not in VALID_PLAN_DAYS:
-            error = "Please select a valid subscription plan."
         else:
             uid_exist, _ = get_user_by_username(form["username"])
             if uid_exist or form["username"].lower() == config.ADMIN_USERNAME.lower():
                 error = "Username already taken. Please choose another."
             else:
-                users  = load_users()
-                new_id = uuid.uuid4().hex[:12]
+                # Always auto-activate on registration
+                # sub_days defaults to 30 if not valid
+                if sub_days not in VALID_PLAN_DAYS:
+                    sub_days = 30
+                new_id  = uuid.uuid4().hex[:12]
                 today   = date.today()
                 end_dt  = today + timedelta(days=sub_days)
-                users[new_id] = {
+                new_user = {
                     "id":                 new_id,
                     "username":           form["username"],
                     "password":           generate_password_hash(password),
@@ -582,8 +583,19 @@ def admin_register():
                     "payment_status":     "paid",
                     "created_at":         datetime.now().isoformat(),
                 }
-                save_users(users)
-                success = f"✅ Registration successful! You can now log in."
+                col = _ucol()
+                if col is not None:
+                    try:
+                        col.insert_one({**new_user, "_id": new_id})
+                    except Exception:
+                        users = load_users()
+                        users[new_id] = new_user
+                        save_users(users)
+                else:
+                    users = load_users()
+                    users[new_id] = new_user
+                    save_users(users)
+                success = "✅ Registration successful! Your account is active. You can now log in."
                 form = {}
 
     return render_template("admin_register.html",
@@ -732,10 +744,11 @@ def superadmin_create_user():
     email    = (data.get("email")    or "").strip()
     phone    = (data.get("phone")    or "").strip()
     password = (data.get("password") or "").strip()
-    activate = bool(data.get("activate", True))
     try:
         sub_days = int(data.get("sub_days", 30))
     except Exception:
+        sub_days = 30
+    if sub_days not in VALID_PLAN_DAYS:
         sub_days = 30
 
     # Validation
@@ -745,18 +758,15 @@ def superadmin_create_user():
         return jsonify({"error": "Invalid username."}), 400
     if len(password) < 6:
         return jsonify({"error": "Password must be at least 6 characters."}), 400
-    if sub_days not in VALID_PLAN_DAYS:
-        return jsonify({"error": "Invalid subscription plan."}), 400
 
     uid_exist, _ = get_user_by_username(username)
     if uid_exist or username.lower() == config.ADMIN_USERNAME.lower():
         return jsonify({"error": "Username already taken."}), 400
 
-    users  = load_users()
+    # Always auto-activate on creation
     new_id = uuid.uuid4().hex[:12]
     today  = date.today()
-
-    users[new_id] = {
+    new_user = {
         "id":                 new_id,
         "username":           username,
         "password":           generate_password_hash(password),
@@ -764,13 +774,24 @@ def superadmin_create_user():
         "company":            company,
         "phone":              phone,
         "subscription_days":  sub_days,
-        "subscription_start": today.isoformat() if activate else None,
-        "subscription_end":   (today + timedelta(days=sub_days)).isoformat() if activate else None,
-        "is_active":          activate,
-        "payment_status":     "paid" if activate else "pending",
+        "subscription_start": today.isoformat(),
+        "subscription_end":   (today + timedelta(days=sub_days)).isoformat(),
+        "is_active":          True,
+        "payment_status":     "paid",
         "created_at":         datetime.now().isoformat(),
     }
-    save_users(users)
+    col = _ucol()
+    if col is not None:
+        try:
+            col.insert_one({**new_user, "_id": new_id})
+        except Exception:
+            users = load_users()
+            users[new_id] = new_user
+            save_users(users)
+    else:
+        users = load_users()
+        users[new_id] = new_user
+        save_users(users)
     return jsonify({"ok": True, "id": new_id})
 
 
