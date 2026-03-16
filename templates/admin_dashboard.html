@@ -837,7 +837,7 @@
       </p>
     </div>
 
-    <!-- Plan cards grid -->
+    [Plan cards grid]
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:24px;" id="planGrid">
       {% for p in plans %}
       <div class="plan-card-pay" data-days="{{ p.days }}" data-price="{{ p.price }}"
@@ -855,7 +855,7 @@
       {% endfor %}
     </div>
 
-    <!-- Selected summary -->
+    [Selected summary]
     <div id="planSummary" style="display:none; background:rgba(245,158,11,.08);
          border:1px solid rgba(245,158,11,.25); border-radius:12px;
          padding:14px 18px; margin-bottom:18px; text-align:center;">
@@ -863,7 +863,7 @@
       <strong id="planSummaryText" style="color:#f59e0b;"></strong>
     </div>
 
-    <!-- Pay button -->
+    [Pay button]
     <button id="payNowBtn" onclick="initiatePayment()" disabled
       style="width:100%;padding:15px;background:linear-gradient(135deg,#f59e0b,#d97706);
              border:none;border-radius:12px;color:#000;font-size:1rem;font-weight:800;
@@ -871,7 +871,7 @@
       💳 Pay &amp; Activate
     </button>
 
-    <!-- Payment history link -->
+    [Payment history link]
     <div style="text-align:center;margin-top:16px;">
       <a href="#" onclick="showPaymentHistory();return false;"
          style="font-size:.78rem;color:#475569;text-decoration:none;">
@@ -879,7 +879,7 @@
       </a>
     </div>
 
-    <!-- Payment history panel -->
+    [Payment history panel]
     <div id="payHistoryPanel" style="display:none;margin-top:16px;">
       <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:14px;">
         <p style="color:#64748b;font-size:.78rem;margin-bottom:10px;">Recent Payments</p>
