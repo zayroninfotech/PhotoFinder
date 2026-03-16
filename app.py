@@ -571,6 +571,12 @@ def admin_login():
                     if user.get("force_logout"):
                         update_user(uid, {"force_logout": False})
                     session.clear()
+                    # Superadmin role → redirect to superadmin dashboard
+                    if user.get("role") == "superadmin":
+                        session["admin"]         = True
+                        session["is_superadmin"] = True
+                        session["username"]      = username
+                        return redirect(url_for("superadmin_dashboard"))
                     session["admin"]        = True
                     session["is_superadmin"] = False
                     session["user_id"]       = uid
