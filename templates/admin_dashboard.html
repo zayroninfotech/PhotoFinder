@@ -813,8 +813,7 @@
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 -->
 
-<!-- ── Plan Renewal Popup — COMMENTED OUT ── -->
-<!--
+<!-- ── Plan Renewal Popup — COMMENTED OUT (enable when Razorpay is live) ──
 <div id="planModal" style="display:none; position:fixed; inset:0; z-index:9000;
      background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
      align-items:center; justify-content:center;">
@@ -823,7 +822,7 @@
               max-height:90vh; overflow-y:auto; position:relative;
               box-shadow:0 32px 80px rgba(0,0,0,.7);">
 
-    <!-- Close -->
+    [Close button]
     <button onclick="closePlanModal()"
       style="position:absolute;top:14px;right:16px;background:none;border:none;
              color:#64748b;font-size:22px;cursor:pointer;line-height:1;">✕</button>
@@ -889,9 +888,11 @@
     </div>
   </div>
 </div>
+-->
 
+<!-- ── Plan popup JS — COMMENTED OUT (enable when Razorpay is live) ──
 <script>
-  // ── Plan popup state ─────────────────────────────────────────────────
+  // Plan popup state
   var _selectedDays  = 0;
   var _selectedPrice = '';
   var _selectedLabel = '';
