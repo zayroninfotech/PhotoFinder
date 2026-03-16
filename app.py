@@ -300,7 +300,7 @@ def _superadmin_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not session.get("admin") or not session.get("is_superadmin"):
-            return redirect(url_for("admin_login"))
+            return redirect(url_for("superadmin_login"))
         return f(*args, **kwargs)
     return wrapper
 
@@ -452,6 +452,44 @@ def _set_status(p: Path, state: str, msg: str):
 def index():
     return redirect(url_for("admin_login"))
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  Superadmin dedicated login / logout
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/superadmin/login", methods=["GET", "POST"])
+def superadmin_login():
+    """Dedicated login page for superadmin only."""
+    if session.get("admin") and session.get("is_superadmin"):
+        return redirect(url_for("superadmin_dashboard"))
+
+    error         = None
+    form_username = ""
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        form_username = username
+
+        if (username == config.ADMIN_USERNAME and
+                password == config.ADMIN_PASSWORD):
+            session.clear()
+            session["admin"]         = True
+            session["is_superadmin"] = True
+            session["username"]      = username
+            return redirect(url_for("superadmin_dashboard"))
+        else:
+            error = "Invalid superadmin credentials."
+
+    return render_template("superadmin_login.html",
+                           error=error, form_username=form_username)
+
+
+@app.route("/superadmin/logout")
+def superadmin_logout():
+    session.clear()
+    return redirect(url_for("superadmin_login"))
+
+
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     error = None
@@ -461,15 +499,6 @@ def admin_login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
-
-        # ── Superadmin check ─────────────────────────────────────────────────
-        if (username == config.ADMIN_USERNAME and
-                password == config.ADMIN_PASSWORD):
-            session.clear()
-            session["admin"]        = True
-            session["is_superadmin"] = True
-            session["username"]      = username
-            return redirect(url_for("superadmin_dashboard"))
 
         # ── Registered user check ─────────────────────────────────────────────
         uid, user = get_user_by_username(username)

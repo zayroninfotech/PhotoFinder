@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Superadmin – Zayron Infotech</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #000;
+      overflow: hidden;
+    }
+
+    /* ── animated background ── */
+    .bg {
+      position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse at 20% 50%, rgba(139,92,246,.18) 0%, transparent 55%),
+                  radial-gradient(ellipse at 80% 20%, rgba(79,70,229,.14) 0%, transparent 50%),
+                  radial-gradient(ellipse at 60% 80%, rgba(217,70,239,.10) 0%, transparent 45%),
+                  #050509;
+    }
+    .bg::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* floating orbs */
+    .orb {
+      position: fixed; border-radius: 50%; filter: blur(80px);
+      animation: orbFloat 8s ease-in-out infinite alternate;
+      pointer-events: none; z-index: 0;
+    }
+    .orb1 { width:380px; height:380px; top:-80px; left:-80px;
+             background: rgba(139,92,246,.25); animation-delay:0s; }
+    .orb2 { width:280px; height:280px; bottom:-60px; right:-60px;
+             background: rgba(79,70,229,.22); animation-delay:-3s; }
+    .orb3 { width:200px; height:200px; top:40%; left:50%;
+             background: rgba(217,70,239,.12); animation-delay:-5s; }
+    @keyframes orbFloat {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(30px,20px) scale(1.08); }
+    }
+
+    /* ── card ── */
+    .card {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 440px;
+      background: rgba(15,10,30,.82);
+      border: 1px solid rgba(139,92,246,.28);
+      border-radius: 24px;
+      padding: 48px 44px 44px;
+      backdrop-filter: blur(28px);
+      box-shadow: 0 0 0 1px rgba(139,92,246,.08),
+                  0 32px 80px rgba(0,0,0,.65),
+                  0 0 60px rgba(139,92,246,.08);
+      animation: cardIn .55s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes cardIn {
+      from { opacity:0; transform: translateY(24px) scale(.97); }
+      to   { opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── badge ── */
+    .sa-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, rgba(139,92,246,.18), rgba(79,70,229,.14));
+      border: 1px solid rgba(139,92,246,.35);
+      border-radius: 100px;
+      padding: 6px 16px;
+      margin-bottom: 28px;
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      color: #a78bfa; text-transform: uppercase;
+    }
+    .sa-badge .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #8b5cf6;
+      box-shadow: 0 0 6px #8b5cf6;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform: scale(1); }
+      50%      { opacity:.5; transform: scale(.75); }
+    }
+
+    /* ── logo area ── */
+    .logo-row {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 10px;
+    }
+    .logo-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 6px 20px rgba(139,92,246,.45);
+    }
+    .logo-text { display:flex; flex-direction:column; gap:2px; }
+    .logo-text .brand { font-size:17px; font-weight:700; color:#e2d9f3; }
+    .logo-text .sub   { font-size:11px; color:#7c6fa0; }
+
+    h2 {
+      font-size: 26px; font-weight: 700;
+      color: #f0ebff; margin-bottom: 6px;
+      letter-spacing: -.3px;
+    }
+    .subtitle { font-size: 13.5px; color: #6b5f8a; margin-bottom: 32px; }
+
+    /* ── divider ── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(139,92,246,.3), transparent);
+      margin-bottom: 32px;
+    }
+
+    /* ── form ── */
+    .field { margin-bottom: 20px; }
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: #8b7aac; text-transform: uppercase; letter-spacing: .8px;
+      margin-bottom: 8px;
+    }
+    .input-wrap {
+      position: relative;
+    }
+    .input-wrap .icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      font-size: 16px; opacity: .5; pointer-events: none;
+    }
+    input[type=text], input[type=password] {
+      width: 100%; padding: 13px 14px 13px 42px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(139,92,246,.2);
+      border-radius: 12px;
+      color: #e2d9f3; font-size: 14.5px;
+      outline: none;
+      transition: border-color .25s, box-shadow .25s, background .25s;
+    }
+    input[type=text]:focus, input[type=password]:focus {
+      border-color: rgba(139,92,246,.6);
+      background: rgba(139,92,246,.07);
+      box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+    }
+    input::placeholder { color: #4a3f6a; }
+
+    /* password toggle */
+    .eye-btn {
+      position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: #6b5f8a; font-size: 17px; padding: 4px;
+      transition: color .2s;
+    }
+    .eye-btn:hover { color: #a78bfa; }
+
+    /* ── submit ── */
+    .btn-login {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      border: none; border-radius: 12px;
+      color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; letter-spacing: .3px;
+      box-shadow: 0 6px 24px rgba(109,40,217,.45);
+      transition: transform .2s, box-shadow .2s, filter .2s;
+      margin-top: 8px;
+    }
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 32px rgba(109,40,217,.55);
+      filter: brightness(1.08);
+    }
+    .btn-login:active { transform: translateY(0); }
+
+    /* ── error ── */
+    .error-box {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 10px; padding: 12px 16px;
+      color: #fca5a5; font-size: 13.5px; margin-bottom: 22px;
+    }
+
+    /* ── back link ── */
+    .back-link {
+      display: block; text-align: center;
+      margin-top: 24px; font-size: 13px;
+      color: #6b5f8a; text-decoration: none;
+      transition: color .2s;
+    }
+    .back-link:hover { color: #a78bfa; }
+
+    /* ── footer ── */
+    .footer {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      font-size: 11.5px; color: #2e2540; white-space: nowrap; z-index:1;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Page Loader -->
+<div id="pgLoader"><div class="pg-spin"></div></div>
+<style>
+  #pgLoader{position:fixed;inset:0;z-index:99999;background:#000010;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,visibility .45s ease;}
+  #pgLoader.done{opacity:0;visibility:hidden;pointer-events:none;}
+  .pg-spin{width:56px;height:56px;border-radius:50%;border:4px solid rgba(255,255,255,0.07);border-top:4px solid #8b5cf6;border-right:4px solid #6d28d9;animation:pgSpin .75s linear infinite;}
+  @keyframes pgSpin{to{transform:rotate(360deg);}}
+</style>
+<script>(function(){var L=document.getElementById('pgLoader');function h(){L.classList.add('done');}window.addEventListener('load',h);window.addEventListener('pageshow',function(e){if(e.persisted)h();});setTimeout(h,6000);})();</script>
+
+<div class="bg"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="card">
+
+  <div class="sa-badge"><span class="dot"></span> Superadmin Access</div>
+
+  <div class="logo-row">
+    <div class="logo-icon">👑</div>
+    <div class="logo-text">
+      <span class="brand">Zayron Infotech</span>
+      <span class="sub">PhotoFinder Control Panel</span>
+    </div>
+  </div>
+
+  <h2>Superadmin Login</h2>
+  <p class="subtitle">Restricted area — authorised personnel only.</p>
+  <div class="divider"></div>
+
+  {% if error %}
+  <div class="error-box">⚠️ {{ error }}</div>
+  {% endif %}
+
+  <form method="POST" action="/superadmin/login">
+    <div class="field">
+      <label>Username</label>
+      <div class="input-wrap">
+        <span class="icon">👤</span>
+        <input type="text" name="username" placeholder="Superadmin username"
+               autocomplete="username" value="{{ form_username or '' }}" required>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <div class="input-wrap">
+        <span class="icon">🔐</span>
+        <input type="password" name="password" id="pwdInput"
+               placeholder="Superadmin password" autocomplete="current-password" required>
+        <button type="button" class="eye-btn" onclick="togglePwd()" id="eyeBtn">🙈</button>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-login">🚀 Access Control Panel</button>
+  </form>
+
+  <a href="/admin/login" class="back-link">← Back to Admin Login</a>
+</div>
+
+<div class="footer">© 2026 Zayron Infotech Pvt. Ltd. — Restricted</div>
+
+<script>
+  function togglePwd() {
+    const inp = document.getElementById('pwdInput');
+    const btn = document.getElementById('eyeBtn');
+    if (inp.type === 'password') { inp.type = 'text';     btn.textContent = '👁️'; }
+    else                         { inp.type = 'password'; btn.textContent = '🙈'; }
+  }
+</script>
+</body>
+</html>
