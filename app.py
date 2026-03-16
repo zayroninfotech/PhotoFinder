@@ -71,21 +71,23 @@ def _ucol():
     db = _get_db()
     return db["users"] if db is not None else None
 
-# DeepFace is imported lazily inside find_matches() to avoid loading
-# TensorFlow at startup (prevents OOM crash on free-tier hosting)
-DeepFace = None
-FACE_OK   = False
+# InsightFace is loaded lazily to avoid OOM on startup
+_insight_app = None
+FACE_OK      = False
 
-def _load_deepface():
-    global DeepFace, FACE_OK
-    if DeepFace is not None:
+def _load_insight():
+    global _insight_app, FACE_OK
+    if _insight_app is not None:
         return FACE_OK
     try:
-        from deepface import DeepFace as _DF
-        DeepFace = _DF
-        FACE_OK  = True
+        from insightface.app import FaceAnalysis
+        _insight_app = FaceAnalysis(name="buffalo_sc",
+                                    providers=["CPUExecutionProvider"])
+        _insight_app.prepare(ctx_id=0, det_size=(320, 320))
+        FACE_OK = True
+        print("[INFO] InsightFace loaded OK")
     except Exception as e:
-        print(f"[WARN] deepface unavailable: {e}")
+        print(f"[WARN] InsightFace unavailable: {e}")
         FACE_OK = False
     return FACE_OK
 
@@ -430,6 +432,7 @@ def download_drive_folder(folder_id: str, dest: Path, status_path: Path):
     _set_status(status_path, "downloaded", f"Downloaded {downloaded} image(s) ({errors} errors)")
 
 def build_encodings(event_dir: Path, status_path: Path):
+    import pickle, numpy as np
     images_dir = event_dir / "images"
     imgs = [p for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS]
     if not imgs:
@@ -440,15 +443,41 @@ def build_encodings(event_dir: Path, status_path: Path):
         _meta["status"] = "error"
         _save_meta(event_dir / "meta.json", _meta)
         return
-    _set_status(status_path, "indexing", f"Indexing {len(imgs)} image(s) for face recognition…")
-    if _load_deepface():
+    _set_status(status_path, "indexing", f"Indexing {len(imgs)} photo(s) with InsightFace…")
+    enc_path = event_dir / "face_encodings.pkl"
+    # Load existing encodings to skip already-processed photos
+    existing = {}
+    if enc_path.exists():
         try:
-            DeepFace.find(
-                img_path=str(imgs[0]), db_path=str(images_dir),
-                model_name=config.FACE_MODEL, detector_backend=config.FACE_DETECTOR,
-                enforce_detection=False, silent=True)
+            with open(str(enc_path), "rb") as f:
+                for entry in pickle.load(f):
+                    existing[entry["filename"]] = entry
         except Exception:
-            pass
+            existing = {}
+    if _load_insight():
+        import cv2
+        new_entries = []
+        for img_path in imgs:
+            if img_path.name in existing:
+                new_entries.append(existing[img_path.name])
+                continue
+            try:
+                img = cv2.imread(str(img_path))
+                if img is None:
+                    continue
+                faces = _insight_app.get(img)
+                for face in faces:
+                    emb = face.embedding.astype(np.float32)
+                    emb = emb / np.linalg.norm(emb)
+                    new_entries.append({
+                        "path":      str(img_path),
+                        "filename":  img_path.name,
+                        "embedding": emb
+                    })
+            except Exception:
+                pass
+        with open(str(enc_path), "wb") as f:
+            pickle.dump(new_entries, f)
     meta = _load_meta(event_dir / "meta.json")
     meta["status"]      = "ready"
     meta["photo_count"] = len(imgs)
@@ -519,27 +548,44 @@ def process_event_bg(event_id: str):
         _save_meta(event_dir / "meta.json", meta)
 
 def find_matches(selfie_path: Path, images_dir: Path) -> list:
-    if not _load_deepface():
-        return [{"path": str(p), "filename": p.name, "distance": 0.0}
-                for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS]
+    import pickle, numpy as np
+    if not _load_insight():
+        return []
     try:
-        results = DeepFace.find(
-            img_path=str(selfie_path), db_path=str(images_dir),
-            model_name=config.FACE_MODEL, detector_backend=config.FACE_DETECTOR,
-            enforce_detection=False, threshold=config.FACE_THRESHOLD, silent=True)
+        import cv2
+        img = cv2.imread(str(selfie_path))
+        if img is None:
+            return []
+        faces = _insight_app.get(img)
+        if not faces:
+            return []
+        # Use the largest detected face as the selfie face
+        selfie_face = max(faces, key=lambda f: (f.bbox[2]-f.bbox[0])*(f.bbox[3]-f.bbox[1]))
+        selfie_emb  = selfie_face.embedding.astype(np.float32)
+        selfie_emb  = selfie_emb / np.linalg.norm(selfie_emb)
+        # Load event encodings
+        enc_path = images_dir.parent / "face_encodings.pkl"
+        if not enc_path.exists():
+            return []
+        with open(str(enc_path), "rb") as f:
+            encodings = pickle.load(f)
+        threshold = 0.40   # cosine similarity — higher = stricter match
         matches, seen = [], set()
-        for df in results:
-            if df.empty:
-                continue
-            for _, row in df.iterrows():
-                p = Path(row["identity"])
-                if str(p) not in seen:
-                    seen.add(str(p))
-                    matches.append({"path": str(p), "filename": p.name,
-                                    "distance": float(row.get("distance", 0))})
+        for entry in encodings:
+            emb        = entry["embedding"].astype(np.float32)
+            emb        = emb / np.linalg.norm(emb)
+            similarity = float(np.dot(selfie_emb, emb))
+            if similarity >= threshold and entry["path"] not in seen:
+                seen.add(entry["path"])
+                matches.append({
+                    "path":     entry["path"],
+                    "filename": entry["filename"],
+                    "distance": round(1.0 - similarity, 4)
+                })
         matches.sort(key=lambda x: x["distance"])
         return matches
-    except Exception:
+    except Exception as e:
+        print(f"[WARN] find_matches error: {e}")
         return []
 
 # ── JSON helpers ──────────────────────────────────────────────────────────────
@@ -1432,20 +1478,20 @@ def upload_selfie(event_id):
         return jsonify({"error": f"Could not read image: {e}"}), 400
 
     # Validate that uploaded image actually contains a face
-    if _load_deepface():
+    if _load_insight():
         try:
-            faces = DeepFace.extract_faces(
-                img_path=str(selfie_path),
-                detector_backend=config.FACE_DETECTOR,
-                enforce_detection=True,
-                align=True
-            )
-            if not faces:
+            import cv2
+            img_cv = cv2.imread(str(selfie_path))
+            if img_cv is None:
                 selfie_path.unlink(missing_ok=True)
-                return jsonify({"error": "❌ No face detected in your photo. Please upload a clear selfie with your face visible."}), 400
+                return jsonify({"error": "❌ Could not read image. Please try again."}), 400
+            detected = _insight_app.get(img_cv)
+            if not detected:
+                selfie_path.unlink(missing_ok=True)
+                return jsonify({"error": "❌ No face detected. Please upload a clear selfie with your face visible."}), 400
         except Exception:
             selfie_path.unlink(missing_ok=True)
-            return jsonify({"error": "❌ No face detected in your photo. Please upload a clear selfie with your face visible."}), 400
+            return jsonify({"error": "❌ No face detected. Please upload a clear selfie with your face visible."}), 400
 
     matches = find_matches(selfie_path, images_dir)
     if not matches:
