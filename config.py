@@ -25,3 +25,9 @@ FACE_THRESHOLD = 0.40             # lower = stricter match
 # ── Server ────────────────────────────────────
 HOST = "0.0.0.0"
 PORT = 5000
+
+# ── MongoDB ─────────────────────────────────────────────────────────────────────────────
+# Local VPS:  "mongodb://localhost:27017/"
+# Atlas:      "mongodb+srv://user:pass@cluster.mongodb.net/"
+MONGODB_URI = "mongodb://localhost:27017/"
+MONGODB_DB  = "photofinder"

@@ -8,3 +8,4 @@ requests>=2.31.0
 gdown>=5.1.0
 numpy>=1.24.0
 tensorflow-cpu>=2.13.0
+pymongo>=4.6.0

@@ -6,6 +6,7 @@ User        → scans QR → uploads selfie → sees matched photos → download
 """
 
 import os, re, io, json, uuid, zipfile, smtplib, threading, shutil
+from pymongo import MongoClient
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from email import encoders
@@ -29,6 +30,34 @@ config.ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", config.ADMIN_PASSWORD)
 config.SECRET_KEY     = os.environ.get("SECRET_KEY",     config.SECRET_KEY)
 config.EMAIL_SENDER   = os.environ.get("EMAIL_SENDER",   config.EMAIL_SENDER)
 config.EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", config.EMAIL_PASSWORD)
+
+# ── MongoDB connection ────────────────────────────────────────────────────────
+_mongo_db = None
+
+def _get_db():
+    """Return MongoDB database instance; None if unavailable."""
+    global _mongo_db
+    if _mongo_db is not None:
+        return _mongo_db
+    try:
+        uri     = getattr(config, "MONGODB_URI", "mongodb://localhost:27017/")
+        db_name = getattr(config, "MONGODB_DB",  "photofinder")
+        client  = MongoClient(uri, serverSelectionTimeoutMS=4000)
+        client.admin.command("ping")          # verify connection
+        _mongo_db = client[db_name]
+        # Create unique index on username once
+        _mongo_db["users"].create_index("username", unique=True, background=True)
+        _mongo_db["users"].create_index("id",       unique=True, background=True)
+        print(f"[INFO] MongoDB connected → {uri}  db={db_name}")
+    except Exception as e:
+        print(f"[WARN] MongoDB unavailable ({e}); falling back to JSON")
+        _mongo_db = None
+    return _mongo_db
+
+def _ucol():
+    """Return the 'users' collection or None (JSON fallback)."""
+    db = _get_db()
+    return db["users"] if db is not None else None
 
 # DeepFace is imported lazily inside find_matches() to avoid loading
 # TensorFlow at startup (prevents OOM crash on free-tier hosting)
@@ -79,6 +108,13 @@ SUBSCRIPTION_PLANS = [
 ]
 VALID_PLAN_DAYS = {p["days"] for p in SUBSCRIPTION_PLANS}
 
+# Run one-time JSON→MongoDB migration on startup
+with app.app_context():
+    try:
+        migrate_json_to_mongo()
+    except Exception:
+        pass
+
 # ── Payment settings helpers ──────────────────────────────────────────────────
 
 PAYMENT_DEFAULTS = {
@@ -111,6 +147,15 @@ def save_payment_settings(settings: dict):
 # ── User helpers ───────────────────────────────────────────────────────────────
 
 def load_users() -> dict:
+    """Return all users as a dict keyed by user ID.
+       Uses MongoDB if available, falls back to JSON file."""
+    col = _ucol()
+    if col is not None:
+        try:
+            return {u["id"]: u for u in col.find({}, {"_id": 0})}
+        except Exception as e:
+            print(f"[WARN] MongoDB load_users: {e}")
+    # JSON fallback
     if USERS_FILE.exists():
         try:
             return json.loads(USERS_FILE.read_text())
@@ -119,15 +164,92 @@ def load_users() -> dict:
     return {}
 
 def save_users(users: dict):
+    """Upsert all users into MongoDB; also write JSON as backup."""
+    col = _ucol()
+    if col is not None:
+        try:
+            for uid, user in users.items():
+                col.replace_one({"id": uid}, {**user, "id": uid}, upsert=True)
+        except Exception as e:
+            print(f"[WARN] MongoDB save_users: {e}")
+    # Always keep JSON backup
     DATA.mkdir(parents=True, exist_ok=True)
     USERS_FILE.write_text(json.dumps(users, indent=2))
 
+def delete_user(user_id: str):
+    """Delete a single user by ID from MongoDB and JSON backup."""
+    col = _ucol()
+    if col is not None:
+        try:
+            col.delete_one({"id": user_id})
+        except Exception as e:
+            print(f"[WARN] MongoDB delete_user: {e}")
+    # Update JSON backup
+    users = {}
+    if USERS_FILE.exists():
+        try:
+            users = json.loads(USERS_FILE.read_text())
+        except Exception:
+            pass
+    if user_id in users:
+        del users[user_id]
+    DATA.mkdir(parents=True, exist_ok=True)
+    USERS_FILE.write_text(json.dumps(users, indent=2))
+
+def update_user(user_id: str, fields: dict):
+    """Update specific fields of a user in MongoDB and JSON backup."""
+    col = _ucol()
+    if col is not None:
+        try:
+            col.update_one({"id": user_id}, {"$set": fields})
+        except Exception as e:
+            print(f"[WARN] MongoDB update_user: {e}")
+    # Update JSON backup
+    users = load_users()
+    if user_id in users:
+        users[user_id].update(fields)
+        DATA.mkdir(parents=True, exist_ok=True)
+        USERS_FILE.write_text(json.dumps(users, indent=2))
+
 def get_user_by_username(username: str):
+    """Find a user by username; returns (id, user_dict) or (None, None)."""
+    col = _ucol()
+    if col is not None:
+        try:
+            u = col.find_one(
+                {"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}},
+                {"_id": 0}
+            )
+            if u:
+                return u["id"], u
+            return None, None
+        except Exception as e:
+            print(f"[WARN] MongoDB get_user_by_username: {e}")
+    # JSON fallback
     users = load_users()
     for uid, user in users.items():
         if user.get("username", "").lower() == username.lower():
             return uid, user
     return None, None
+
+def migrate_json_to_mongo():
+    """One-time migration: import existing users.json into MongoDB."""
+    col = _ucol()
+    if col is None or not USERS_FILE.exists():
+        return
+    try:
+        existing = json.loads(USERS_FILE.read_text())
+        if not existing:
+            return
+        migrated = 0
+        for uid, user in existing.items():
+            if col.find_one({"id": uid}) is None:
+                col.insert_one({**user, "id": uid})
+                migrated += 1
+        if migrated:
+            print(f"[INFO] Migrated {migrated} users from JSON → MongoDB")
+    except Exception as e:
+        print(f"[WARN] Migration error: {e}")
 
 def is_subscription_active(user: dict) -> bool:
     if not user.get("is_active", False):
@@ -496,14 +618,15 @@ def superadmin_activate(user_id):
     u        = users[user_id]
     sub_days = u.get("subscription_days", 30)
     today    = date.today()
-    u["is_active"]          = True
-    u["payment_status"]     = "paid"
-    u["subscription_start"] = today.isoformat()
-    u["subscription_end"]   = (today + timedelta(days=sub_days)).isoformat()
-    save_users(users)
-    return jsonify({"ok": True,
-                    "end": u["subscription_end"],
-                    "days": sub_days})
+    end_iso  = (today + timedelta(days=sub_days)).isoformat()
+    fields = {
+        "is_active":          True,
+        "payment_status":     "paid",
+        "subscription_start": today.isoformat(),
+        "subscription_end":   end_iso,
+    }
+    update_user(user_id, fields)
+    return jsonify({"ok": True, "end": end_iso, "days": sub_days})
 
 
 @app.route("/superadmin/deactivate/<user_id>", methods=["POST"])
@@ -512,8 +635,7 @@ def superadmin_deactivate(user_id):
     users = load_users()
     if user_id not in users:
         return jsonify({"error": "User not found"}), 404
-    users[user_id]["is_active"] = False
-    save_users(users)
+    update_user(user_id, {"is_active": False})
     return jsonify({"ok": True})
 
 
@@ -524,17 +646,16 @@ def superadmin_set_status(user_id):
     if user_id not in users:
         return jsonify({"error": "User not found"}), 404
     active = bool((request.json or {}).get("active", False))
-    u = users[user_id]
-    u["is_active"] = active
+    u      = users[user_id]
+    fields = {"is_active": active}
     if active:
-        # If activating and no subscription dates set, start from today
         if not u.get("subscription_start"):
-            today = date.today()
+            today    = date.today()
             sub_days = u.get("subscription_days", 30)
-            u["subscription_start"] = today.isoformat()
-            u["subscription_end"]   = (today + timedelta(days=sub_days)).isoformat()
-        u["payment_status"] = "paid"
-    save_users(users)
+            fields["subscription_start"] = today.isoformat()
+            fields["subscription_end"]   = (today + timedelta(days=sub_days)).isoformat()
+        fields["payment_status"] = "paid"
+    update_user(user_id, fields)
     return jsonify({"ok": True})
 
 
@@ -555,22 +676,21 @@ def superadmin_extend(user_id):
     except Exception:
         base = date.today()
     new_end = base + timedelta(days=extra)
-    u["subscription_end"]   = new_end.isoformat()
-    u["is_active"]          = True
-    u["payment_status"]     = "paid"
+    fields  = {
+        "subscription_end":   new_end.isoformat(),
+        "is_active":          True,
+        "payment_status":     "paid",
+    }
     if not u.get("subscription_start"):
-        u["subscription_start"] = date.today().isoformat()
-    save_users(users)
+        fields["subscription_start"] = date.today().isoformat()
+    update_user(user_id, fields)
     return jsonify({"ok": True, "new_end": new_end.isoformat()})
 
 
 @app.route("/superadmin/delete-user/<user_id>", methods=["POST"])
 @_superadmin_required
 def superadmin_delete_user(user_id):
-    users = load_users()
-    if user_id in users:
-        del users[user_id]
-        save_users(users)
+    delete_user(user_id)
     return jsonify({"ok": True})
 
 
@@ -696,8 +816,7 @@ def superadmin_update_plan(user_id):
         return jsonify({"error": "Invalid days"}), 400
     if days not in VALID_PLAN_DAYS:
         return jsonify({"error": "Invalid plan"}), 400
-    users[user_id]["subscription_days"] = days
-    save_users(users)
+    update_user(user_id, {"subscription_days": days})
     return jsonify({"ok": True})
 
 
