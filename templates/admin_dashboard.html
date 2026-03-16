@@ -567,6 +567,9 @@
       <button class="btn-copy" onclick="copyUrl()">
         🔗 Copy User Link
       </button>
+      <button class="btn-reindex" id="reindexBtn" onclick="reindexEvent()" style="background:#f59e0b;color:#000;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;width:100%;margin-top:6px;">
+        🔄 Re-index Photos from Drive
+      </button>
     </div>
 
   </div><!-- /right-panel -->
@@ -768,6 +771,32 @@
     navigator.clipboard.writeText(currentUserUrl).then(() => {
       toast('✅ User link copied!', '#22c55e');
     });
+  }
+
+  function reindexEvent() {
+    if (!currentEventId) return;
+    const btn = document.getElementById('reindexBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Re-indexing...';
+    fetch(`/admin/reindex/${currentEventId}`, { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) {
+          btn.textContent = '✅ Re-indexing started!';
+          startStatusPoll(currentEventId);
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = '🔄 Re-index Photos from Drive';
+          }, 5000);
+        } else {
+          btn.textContent = '❌ ' + (d.error || 'Failed');
+          btn.disabled = false;
+        }
+      })
+      .catch(() => {
+        btn.textContent = '❌ Error';
+        btn.disabled = false;
+      });
   }
 
   function printQR() {

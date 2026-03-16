@@ -1278,6 +1278,28 @@ def admin_add_photos(event_id):
     return jsonify({"error": "No valid images"}), 400
 
 
+@app.route("/admin/reindex/<event_id>", methods=["POST"])
+@_admin_required
+def admin_reindex(event_id):
+    """Re-download photos from Drive and rebuild face encodings."""
+    event_dir  = EVENTS / event_id
+    meta       = _load_meta(event_dir / "meta.json")
+    folder_id  = meta.get("folder_id")
+    if not folder_id:
+        return jsonify({"error": "No Drive folder linked to this event"}), 400
+    images_dir = event_dir / "images"
+    images_dir.mkdir(exist_ok=True)
+    # Clear old encodings so DeepFace rebuilds fresh
+    for pkl in images_dir.glob("*.pkl"):
+        pkl.unlink()
+    status_path = event_dir / "status.json"
+    meta["status"] = "processing"
+    _save_meta(event_dir / "meta.json", meta)
+    t = threading.Thread(target=process_event_bg, args=(event_id,), daemon=True)
+    t.start()
+    return jsonify({"ok": True, "message": "Re-indexing started"})
+
+
 @app.route("/admin/delete/<event_id>", methods=["POST"])
 @_admin_required
 def admin_delete(event_id):
