@@ -845,7 +845,7 @@
   let currentSessionId = null;
   let currentMatchCount = 0;
 
-  function showResults(data) {
+  async function showResults(data) {
     const section = document.getElementById('resultsSection');
     const grid    = document.getElementById('photosGrid');
     const count   = document.getElementById('resultsCount');
@@ -855,58 +855,85 @@
     currentSessionId  = data.session_id;
     currentMatchCount = data.match_count;
 
-    count.textContent = `${data.match_count} photo${data.match_count !== 1 ? 's' : ''} found`;
-    dlBtn.innerHTML   = `⬇ Download All ${data.match_count} Photo${data.match_count !== 1 ? 's' : ''} (ZIP)`;
-    dlInfo.textContent = `${data.match_count} photo${data.match_count !== 1 ? 's' : ''} at full original quality — packed into one ZIP file.`;
+    count.textContent  = `${data.match_count} photo${data.match_count !== 1 ? 's' : ''} found`;
+    dlBtn.innerHTML    = `⬇ Download All ${data.match_count} Photo${data.match_count !== 1 ? 's' : ''} (ZIP)`;
+    dlInfo.textContent = `${data.match_count} photo${data.match_count !== 1 ? 's' : ''} · Full original quality · ZIP download`;
 
+    // Build grid with THUMBNAILS (fast load)
     grid.innerHTML = '';
     data.photos.forEach((ph, i) => {
+      const thumbUrl  = ph.url + '/thumb';   // fast preview
+      const fullUrl   = ph.url;              // full-res for lightbox & download
       const card = document.createElement('div');
       card.className = 'photo-card';
+      card.dataset.full = fullUrl;
+      card.dataset.name = ph.filename;
       card.innerHTML = `
         <span class="photo-num">#${i + 1}</span>
-        <img src="${ph.url}" alt="${ph.filename}" loading="lazy">
+        <img src="${thumbUrl}" alt="${ph.filename}" loading="lazy">
         <div class="photo-overlay">
           <span class="photo-overlay-icon">🔍</span>
-          <button class="photo-dl-btn" onclick="downloadSingle('${ph.url}','${ph.filename}',event)">⬇ Save</button>
+          <button class="photo-dl-btn" onclick="downloadSingle('${fullUrl}','${ph.filename}',event)">⬇ Save</button>
         </div>
       `;
-      card.onclick = () => openLightbox(ph.url, i, data.photos);
+      card.onclick = () => openLightbox(fullUrl, i, data.photos);
       grid.appendChild(card);
     });
 
     section.classList.add('show');
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     toast(`✅ Found ${data.match_count} matching photo${data.match_count !== 1 ? 's' : ''}!`);
+
+    // Fetch file sizes in background and update info
+    try {
+      const infoRes = await fetch(`/photo/${data.session_id}/info`);
+      const infoData = await infoRes.json();
+      const totalKB = infoData.reduce((s, x) => s + x.size_kb, 0);
+      const totalMB = (totalKB / 1024).toFixed(1);
+      dlBtn.innerHTML = `⬇ Download All ${data.match_count} Photos (ZIP · ${totalMB} MB)`;
+      dlInfo.textContent = `${data.match_count} photos · ${totalMB} MB total · Full original quality · ZIP`;
+    } catch {}
   }
 
-  // Download single photo
+  // Download single photo at full quality
   function downloadSingle(url, filename, e) {
-    e && e.stopPropagation();
-    const a  = document.createElement('a');
-    a.href   = url;
+    if (e) e.stopPropagation();
+    const a = document.createElement('a');
+    a.href = url;
     a.download = filename || 'photo.jpg';
-    a.click();
-  }
-
-  // Download all as ZIP
-  function startDownload() {
-    if (!currentSessionId) return;
-    const btn = document.getElementById('downloadAllBtn');
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Preparing ZIP…';
-    // Trigger download
-    const a  = document.createElement('a');
-    a.href   = `/download/${currentSessionId}`;
-    a.download = 'my_photos.zip';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    // Restore button after short delay
-    setTimeout(() => {
-      btn.disabled = false;
+  }
+
+  // Download all as streaming ZIP
+  async function startDownload() {
+    if (!currentSessionId) return;
+    const btn = document.getElementById('downloadAllBtn');
+    btn.disabled  = true;
+    btn.innerHTML = '⏳ Preparing ZIP… Please wait';
+
+    try {
+      // Fetch as blob to track completion properly
+      const resp = await fetch(`/download/${currentSessionId}`);
+      if (!resp.ok) { toast('❌ Download failed. Please try again.'); return; }
+
+      const blob = await resp.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = 'my_photos.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast('✅ ZIP downloaded successfully!');
+    } catch {
+      toast('❌ Download failed. Please try again.');
+    } finally {
+      btn.disabled  = false;
       btn.innerHTML = `⬇ Download All ${currentMatchCount} Photo${currentMatchCount !== 1 ? 's' : ''} (ZIP)`;
-    }, 3500);
+    }
   }
 
   function hideResults() {

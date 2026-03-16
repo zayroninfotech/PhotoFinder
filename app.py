@@ -5,7 +5,7 @@ Admin       → submits Google Drive link → QR generated
 User        → scans QR → uploads selfie → sees matched photos → download / email
 """
 
-import os, re, io, json, uuid, zipfile, smtplib, threading, shutil, hmac, hashlib
+import os, re, io, json, uuid, zipfile, smtplib, threading, shutil, hmac, hashlib, tempfile
 from pymongo import MongoClient
 try:
     import razorpay as _rzp_lib
@@ -23,7 +23,8 @@ from functools import wraps
 import qrcode
 import requests
 from flask import (Flask, render_template, request, session,
-                   redirect, url_for, jsonify, send_file)
+                   redirect, url_for, jsonify, send_file,
+                   Response, stream_with_context)
 from PIL import Image
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -1290,45 +1291,107 @@ def upload_selfie(event_id):
 
 @app.route("/photo/<sid>/<int:idx>")
 def serve_photo(sid, idx):
+    """Serve matched photo at full original quality."""
     data = _load_meta(RES / sid / "matches.json")
     if not data or idx >= len(data["matches"]):
         return "Not found", 404
-    return send_file(data["matches"][idx]["path"])
+    p = Path(data["matches"][idx]["path"])
+    if not p.exists():
+        return "Photo not found", 404
+    return send_file(str(p))
+
+
+@app.route("/photo/<sid>/<int:idx>/thumb")
+def serve_photo_thumb(sid, idx):
+    """Serve a small thumbnail (max 400px) for fast grid preview."""
+    data = _load_meta(RES / sid / "matches.json")
+    if not data or idx >= len(data["matches"]):
+        return "Not found", 404
+    p = Path(data["matches"][idx]["path"])
+    if not p.exists():
+        return "Photo not found", 404
+    try:
+        img = Image.open(str(p)).convert("RGB")
+        img.thumbnail((400, 400), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=75, optimize=True)
+        buf.seek(0)
+        return send_file(buf, mimetype="image/jpeg")
+    except Exception:
+        return send_file(str(p))
 
 
 @app.route("/download/<sid>")
 def download_zip(sid):
+    """Stream matched photos as ZIP using a temp file — safe for large/many images."""
     data = _load_meta(RES / sid / "matches.json")
     if not data:
         return "Session not found", 404
     matches = data.get("matches", [])
+    if not matches:
+        return "No photos to download", 404
 
-    # Use ZIP_STORED — images (JPEG/PNG) are already compressed;
-    # deflating them again wastes CPU and barely saves space.
-    # Build into a temp BytesIO buffer so we can set Content-Length
-    # which lets browsers show a real download progress bar.
-    buf = io.BytesIO()
+    # Write ZIP to a temp file so we don't hold GBs in RAM
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+    tmp.close()
+    tmp_path = Path(tmp.name)
+
     seen_names: set = set()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
-        for m in matches:
-            p = Path(m["path"])
-            if not p.exists():
-                continue
-            # Deduplicate filenames inside the ZIP
-            fname = m["filename"]
-            if fname in seen_names:
-                stem  = p.stem
-                ext   = p.suffix
-                fname = f"{stem}_{uuid.uuid4().hex[:4]}{ext}"
-            seen_names.add(fname)
-            zf.write(str(p), fname)
+    try:
+        # ZIP_STORED: JPEG/PNG are already compressed; no point deflating
+        with zipfile.ZipFile(str(tmp_path), "w", zipfile.ZIP_STORED) as zf:
+            for m in matches:
+                p = Path(m["path"])
+                if not p.exists():
+                    continue
+                fname = m["filename"]
+                if fname in seen_names:
+                    fname = f"{p.stem}_{uuid.uuid4().hex[:4]}{p.suffix}"
+                seen_names.add(fname)
+                zf.write(str(p), fname)
 
-    size = buf.tell()
-    buf.seek(0)
-    resp = send_file(buf, mimetype="application/zip",
-                     as_attachment=True, download_name="my_photos.zip")
-    resp.headers["Content-Length"] = str(size)
-    return resp
+        zip_size = tmp_path.stat().st_size
+
+        def _generate():
+            try:
+                with open(str(tmp_path), "rb") as fh:
+                    while True:
+                        chunk = fh.read(65536)   # 64 KB chunks
+                        if not chunk:
+                            break
+                        yield chunk
+            finally:
+                try:
+                    tmp_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+
+        return Response(
+            stream_with_context(_generate()),
+            mimetype="application/zip",
+            headers={
+                "Content-Disposition": 'attachment; filename="my_photos.zip"',
+                "Content-Length":      str(zip_size),
+                "Cache-Control":       "no-store",
+            }
+        )
+    except Exception as e:
+        tmp_path.unlink(missing_ok=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/photo/<sid>/info")
+def photo_info(sid):
+    """Return file sizes of matched photos for display in UI."""
+    data = _load_meta(RES / sid / "matches.json")
+    if not data:
+        return jsonify([])
+    info = []
+    for i, m in enumerate(data.get("matches", [])):
+        p = Path(m["path"])
+        size_kb = round(p.stat().st_size / 1024, 1) if p.exists() else 0
+        info.append({"idx": i, "filename": m["filename"], "size_kb": size_kb})
+    return jsonify(info)
 
 
 @app.route("/send-email", methods=["POST"])
