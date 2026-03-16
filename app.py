@@ -783,9 +783,11 @@ def admin_submit():
                 ext = Path(f.filename).suffix.lower()
                 if ext in IMG_EXTS:
                     try:
-                        img = Image.open(f.stream).convert("RGB")
+                        # Save original bytes directly — no PIL re-encoding,
+                        # so the photo stays at 100 % of its original quality.
+                        raw = f.read()
                         out = images_dir / f"{uuid.uuid4().hex[:8]}{ext}"
-                        img.save(str(out), quality=92)
+                        out.write_bytes(raw)
                         saved += 1
                     except Exception:
                         pass
@@ -830,9 +832,9 @@ def admin_add_photos(event_id):
             ext = Path(f.filename).suffix.lower()
             if ext in IMG_EXTS:
                 try:
-                    img = Image.open(f.stream).convert("RGB")
+                    raw = f.read()
                     out = images_dir / f"{uuid.uuid4().hex[:8]}{ext}"
-                    img.save(str(out), quality=92)
+                    out.write_bytes(raw)
                     saved += 1
                 except Exception:
                     pass
@@ -958,13 +960,34 @@ def download_zip(sid):
     data = _load_meta(RES / sid / "matches.json")
     if not data:
         return "Session not found", 404
+    matches = data.get("matches", [])
+
+    # Use ZIP_STORED — images (JPEG/PNG) are already compressed;
+    # deflating them again wastes CPU and barely saves space.
+    # Build into a temp BytesIO buffer so we can set Content-Length
+    # which lets browsers show a real download progress bar.
     buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for m in data["matches"]:
-            zf.write(m["path"], m["filename"])
+    seen_names: set = set()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
+        for m in matches:
+            p = Path(m["path"])
+            if not p.exists():
+                continue
+            # Deduplicate filenames inside the ZIP
+            fname = m["filename"]
+            if fname in seen_names:
+                stem  = p.stem
+                ext   = p.suffix
+                fname = f"{stem}_{uuid.uuid4().hex[:4]}{ext}"
+            seen_names.add(fname)
+            zf.write(str(p), fname)
+
+    size = buf.tell()
     buf.seek(0)
-    return send_file(buf, mimetype="application/zip",
+    resp = send_file(buf, mimetype="application/zip",
                      as_attachment=True, download_name="my_photos.zip")
+    resp.headers["Content-Length"] = str(size)
+    return resp
 
 
 @app.route("/send-email", methods=["POST"])

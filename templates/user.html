@@ -354,9 +354,10 @@
 
     .photos-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 14px; margin-bottom: 28px;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px; margin-bottom: 28px;
     }
+    @media(min-width:520px){ .photos-grid { grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); } }
     .photo-card {
       position: relative; border-radius: 14px;
       overflow: hidden; aspect-ratio: 1;
@@ -368,12 +369,29 @@
     .photo-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .photo-card .photo-overlay {
       position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(180,83,9,.7), rgba(245,158,11,.5));
-      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(160deg, rgba(7,9,26,.55) 0%, rgba(180,83,9,.65) 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px;
       opacity: 0; transition: opacity .2s;
     }
     .photo-card:hover .photo-overlay { opacity: 1; }
-    .photo-overlay-icon { font-size: 28px; }
+    .photo-overlay-icon { font-size: 24px; }
+    .photo-dl-btn {
+      background: rgba(245,158,11,.9); color: #0a0e1f;
+      border: none; border-radius: 8px; padding: 5px 12px;
+      font-size: .72rem; font-weight: 800; cursor: pointer;
+      white-space: nowrap;
+    }
+    .photo-dl-btn:hover { background: #f59e0b; }
+
+    /* Photo number badge */
+    .photo-num {
+      position: absolute; top: 6px; left: 7px;
+      background: rgba(0,0,0,.55); color: #fff;
+      font-size: .65rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 10px;
+      z-index: 2; pointer-events: none;
+    }
 
     /* Action buttons */
     .action-row { display: flex; flex-direction: column; gap: 12px; }
@@ -391,11 +409,22 @@
       box-shadow: 0 4px 20px rgba(245,158,11,.3);
     }
     .btn-dl:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(245,158,11,.45); }
+    .btn-dl:disabled { opacity:.6; cursor:not-allowed; transform:none; }
     .btn-mail {
       background: var(--card); border: 1.5px solid var(--border) !important;
       color: var(--text);
     }
     .btn-mail:hover { background: #f8fafc; border-color: #94a3b8 !important; }
+
+    /* Download info row */
+    .dl-info {
+      display: flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg,rgba(180,83,9,.07),rgba(245,158,11,.07));
+      border: 1px solid rgba(245,158,11,.18);
+      border-radius: 12px; padding: 10px 14px;
+      font-size: .8rem; color: #92400e; margin-bottom: 12px;
+    }
+    .dl-info strong { color: #b45309; }
 
     /* ══════════════════════════════════════════
        CAMERA MODAL
@@ -635,10 +664,14 @@
 
     <div class="photos-grid" id="photosGrid"></div>
 
+    <div class="dl-info" id="dlInfo">
+      📦 <span id="dlInfoText">All photos will be downloaded as a ZIP file at full original quality.</span>
+    </div>
+
     <div class="action-row">
-      <a id="downloadAllBtn" class="btn-action btn-dl" href="#" download>
+      <button id="downloadAllBtn" class="btn-action btn-dl" onclick="startDownload()">
         ⬇ Download All Photos (ZIP)
-      </a>
+      </button>
       <button class="btn-action btn-mail" onclick="openEmailModal()">
         ✉ Send to My Email
       </button>
@@ -677,8 +710,46 @@
 <!-- ══ LIGHTBOX ══════════════════════════════════════════════ -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-  <img id="lightboxImg" src="" alt="">
+
+  <!-- Prev / Next -->
+  <button id="lbPrev" class="lb-nav lb-prev" onclick="lbPrev(event)">‹</button>
+  <button id="lbNext" class="lb-nav lb-next" onclick="lbNext(event)">›</button>
+
+  <img id="lightboxImg" src="" alt="" onclick="event.stopPropagation()">
+
+  <!-- Bottom bar -->
+  <div class="lb-bar" onclick="event.stopPropagation()">
+    <span id="lbInfo" class="lb-info"></span>
+    <button class="lb-dl-btn" onclick="downloadSingle(document.getElementById('lightboxImg').src,'photo.jpg',event)">⬇ Save Photo</button>
+  </div>
 </div>
+
+<style>
+  .lb-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(255,255,255,.12); border: none; color: #fff;
+    font-size: 2rem; width: 52px; height: 52px; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background .2s; z-index: 2;
+  }
+  .lb-nav:hover { background: rgba(255,255,255,.25); }
+  .lb-prev { left: 16px; }
+  .lb-next { right: 16px; }
+  .lb-bar {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(0,0,0,.55); border-radius: 30px;
+    padding: 8px 18px; z-index: 2;
+  }
+  .lb-info { font-size: .82rem; color: #cbd5e1; font-weight: 600; white-space: nowrap; }
+  .lb-dl-btn {
+    background: linear-gradient(135deg,#b45309,#f59e0b);
+    border: none; border-radius: 20px;
+    color: #0a0e1f; font-size: .78rem; font-weight: 800;
+    padding: 6px 16px; cursor: pointer; white-space: nowrap;
+  }
+  .lb-dl-btn:hover { opacity: .85; }
+</style>
 
 <!-- ══ FOOTER ════════════════════════════════════════════════ -->
 <div class="footer">
@@ -771,36 +842,79 @@
     }
   }
 
+  let currentSessionId = null;
+  let currentMatchCount = 0;
+
   function showResults(data) {
     const section = document.getElementById('resultsSection');
     const grid    = document.getElementById('photosGrid');
     const count   = document.getElementById('resultsCount');
     const dlBtn   = document.getElementById('downloadAllBtn');
+    const dlInfo  = document.getElementById('dlInfoText');
+
+    currentSessionId  = data.session_id;
+    currentMatchCount = data.match_count;
 
     count.textContent = `${data.match_count} photo${data.match_count !== 1 ? 's' : ''} found`;
-    dlBtn.href = `/download/${data.session_id}`;
+    dlBtn.innerHTML   = `⬇ Download All ${data.match_count} Photo${data.match_count !== 1 ? 's' : ''} (ZIP)`;
+    dlInfo.textContent = `${data.match_count} photo${data.match_count !== 1 ? 's' : ''} at full original quality — packed into one ZIP file.`;
 
     grid.innerHTML = '';
-    data.photos.forEach(ph => {
+    data.photos.forEach((ph, i) => {
       const card = document.createElement('div');
       card.className = 'photo-card';
       card.innerHTML = `
+        <span class="photo-num">#${i + 1}</span>
         <img src="${ph.url}" alt="${ph.filename}" loading="lazy">
-        <div class="photo-overlay"><span class="photo-overlay-icon">🔍</span></div>
+        <div class="photo-overlay">
+          <span class="photo-overlay-icon">🔍</span>
+          <button class="photo-dl-btn" onclick="downloadSingle('${ph.url}','${ph.filename}',event)">⬇ Save</button>
+        </div>
       `;
-      card.onclick = () => openLightbox(ph.url);
+      card.onclick = () => openLightbox(ph.url, i, data.photos);
       grid.appendChild(card);
     });
 
     section.classList.add('show');
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    toast(`✅ Found ${data.match_count} matching photo(s)!`);
+    toast(`✅ Found ${data.match_count} matching photo${data.match_count !== 1 ? 's' : ''}!`);
+  }
+
+  // Download single photo
+  function downloadSingle(url, filename, e) {
+    e && e.stopPropagation();
+    const a  = document.createElement('a');
+    a.href   = url;
+    a.download = filename || 'photo.jpg';
+    a.click();
+  }
+
+  // Download all as ZIP
+  function startDownload() {
+    if (!currentSessionId) return;
+    const btn = document.getElementById('downloadAllBtn');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Preparing ZIP…';
+    // Trigger download
+    const a  = document.createElement('a');
+    a.href   = `/download/${currentSessionId}`;
+    a.download = 'my_photos.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // Restore button after short delay
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = `⬇ Download All ${currentMatchCount} Photo${currentMatchCount !== 1 ? 's' : ''} (ZIP)`;
+    }, 3500);
   }
 
   function hideResults() {
     document.getElementById('resultsSection').classList.remove('show');
     document.getElementById('photosGrid').innerHTML = '';
-    sessionId = null;
+    sessionId        = null;
+    currentSessionId = null;
+    currentMatchCount = 0;
   }
 
   function showError(msg) {
@@ -810,20 +924,48 @@
   }
   function hideError() { document.getElementById('errorBox').classList.remove('show'); }
 
-  // ── Lightbox ──────────────────────────────────────────────────────────────
-  function openLightbox(url) {
-    document.getElementById('lightboxImg').src = url;
+  // ── Lightbox with prev/next navigation ───────────────────────────────────
+  let _lbPhotos = [], _lbIdx = 0;
+
+  function openLightbox(url, idx, photos) {
+    _lbPhotos = photos || [{url}];
+    _lbIdx    = idx || 0;
+    _renderLightbox();
     document.getElementById('lightbox').classList.add('show');
     document.body.style.overflow = 'hidden';
   }
+
+  function _renderLightbox() {
+    const ph = _lbPhotos[_lbIdx];
+    document.getElementById('lightboxImg').src = ph.url;
+    const info = document.getElementById('lbInfo');
+    if (info) info.textContent = `${_lbIdx + 1} / ${_lbPhotos.length}`;
+    // Prev/next button visibility
+    const prev = document.getElementById('lbPrev');
+    const next = document.getElementById('lbNext');
+    if (prev) prev.style.display = _lbPhotos.length > 1 ? 'flex' : 'none';
+    if (next) next.style.display = _lbPhotos.length > 1 ? 'flex' : 'none';
+  }
+
+  function lbPrev(e) { e && e.stopPropagation(); _lbIdx = (_lbIdx - 1 + _lbPhotos.length) % _lbPhotos.length; _renderLightbox(); }
+  function lbNext(e) { e && e.stopPropagation(); _lbIdx = (_lbIdx + 1) % _lbPhotos.length; _renderLightbox(); }
+
   function closeLightbox() {
     document.getElementById('lightbox').classList.remove('show');
     document.body.style.overflow = '';
   }
 
+  // Keyboard nav in lightbox
+  document.addEventListener('keydown', e => {
+    if (!document.getElementById('lightbox').classList.contains('show')) return;
+    if (e.key === 'ArrowLeft')  lbPrev();
+    if (e.key === 'ArrowRight') lbNext();
+    if (e.key === 'Escape')     closeLightbox();
+  });
+
   // ── Email modal ───────────────────────────────────────────────────────────
   function openEmailModal() {
-    if (!sessionId) { toast('No results to send.'); return; }
+    if (!currentSessionId) { toast('No results to send.'); return; }
     document.getElementById('emailModal').classList.add('show');
     document.getElementById('emailInput').focus();
   }
@@ -839,7 +981,7 @@
     const resp = await fetch('/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, session_id: sessionId }),
+      body: JSON.stringify({ email, session_id: currentSessionId }),
     });
     const data = await resp.json();
     btn.disabled = false; btn.textContent = 'Send Photos →';
