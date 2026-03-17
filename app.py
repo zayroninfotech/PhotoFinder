@@ -133,9 +133,12 @@ with app.app_context():
     except Exception:
         pass
 
-# ── Auto-sync: check Drive for new photos every 5 minutes ─────────────────────
+# ── Auto-sync: check Drive for new photos every 15 minutes ────────────────────
+_sync_locks = {}   # per-event lock to prevent concurrent syncs
+
 def _auto_sync_all_events():
-    """Background job — runs every 5 min, checks all events for new Drive photos."""
+    """Background job — runs every 15 min.
+       FAST check: lists Drive files first, only downloads if new files detected."""
     import threading
     try:
         if EVENTS.exists():
@@ -145,15 +148,36 @@ def _auto_sync_all_events():
                 meta        = _load_meta(event_dir / "meta.json")
                 status_path = event_dir / "status.json"
                 status      = _load_meta(status_path)
-                # Only sync events that are ready and have a Drive folder
-                if (meta.get("folder_id") and
-                        status.get("state") in ("ready", None) and
-                        meta.get("status") == "ready"):
-                    threading.Thread(
-                        target=reindex_event_bg,
-                        args=(event_dir.name,),
-                        daemon=True
-                    ).start()
+                folder_id   = meta.get("folder_id", "")
+                # Skip if not ready, no folder, or already syncing
+                if not folder_id:
+                    continue
+                if status.get("state") not in ("ready", None):
+                    continue
+                if meta.get("status") != "ready":
+                    continue
+                if _sync_locks.get(event_dir.name):
+                    continue
+                # Fast check: list Drive files and compare with local
+                try:
+                    drive_files  = list_drive_images(folder_id)
+                    drive_names  = {f["name"] for f in drive_files}
+                    images_dir   = event_dir / "images"
+                    local_names  = {p.name for p in images_dir.rglob("*")
+                                    if p.suffix.lower() in IMG_EXTS}
+                    new_files    = drive_names - local_names
+                    if not new_files:
+                        continue   # nothing new — skip entirely
+                    print(f"[AUTO-SYNC] {event_dir.name}: {len(new_files)} new photo(s) found")
+                    _sync_locks[event_dir.name] = True
+                    def _run(eid):
+                        try:
+                            reindex_event_bg(eid)
+                        finally:
+                            _sync_locks.pop(eid, None)
+                    threading.Thread(target=_run, args=(event_dir.name,), daemon=True).start()
+                except Exception:
+                    pass   # Drive API failed — skip this event silently
     except Exception as e:
         try:
             print(f"[WARN] Auto-sync error: {e}")
@@ -161,7 +185,7 @@ def _auto_sync_all_events():
             pass
     finally:
         import threading
-        threading.Timer(300, _auto_sync_all_events).start()  # every 5 minutes
+        threading.Timer(900, _auto_sync_all_events).start()  # every 15 minutes
 
 # Pre-warm InsightFace model on startup (so first search is instant)
 def _prewarm_insight():
