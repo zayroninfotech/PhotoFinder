@@ -1532,7 +1532,9 @@ def upload_selfie(event_id):
     if ev_status == "error":
         st_msg = _load_meta(event_dir / "status.json").get("message", "Event processing failed.")
         return jsonify({"error": f"⚠️ {st_msg}"}), 503
-    if ev_status != "ready":
+    # Allow search if ready OR downloading (auto-sync) — existing encodings still valid
+    enc_exists = (event_dir / "face_encodings.pkl").exists()
+    if ev_status not in ("ready", "downloading") or (ev_status != "ready" and not enc_exists):
         return jsonify({"error": "Event photos are still processing. Please try again shortly."}), 503
 
     sid         = uuid.uuid4().hex[:10]
