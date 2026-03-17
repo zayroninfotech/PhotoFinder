@@ -133,6 +133,48 @@ with app.app_context():
     except Exception:
         pass
 
+# ── Auto-sync: check Drive for new photos every 5 minutes ─────────────────────
+def _auto_sync_all_events():
+    """Background job — runs every 5 min, checks all events for new Drive photos."""
+    import threading
+    try:
+        if EVENTS.exists():
+            for event_dir in EVENTS.iterdir():
+                if not event_dir.is_dir():
+                    continue
+                meta        = _load_meta(event_dir / "meta.json")
+                status_path = event_dir / "status.json"
+                status      = _load_meta(status_path)
+                # Only sync events that are ready and have a Drive folder
+                if (meta.get("folder_id") and
+                        status.get("state") in ("ready", None) and
+                        meta.get("status") == "ready"):
+                    threading.Thread(
+                        target=reindex_event_bg,
+                        args=(event_dir.name,),
+                        daemon=True
+                    ).start()
+    except Exception as e:
+        try:
+            print(f"[WARN] Auto-sync error: {e}")
+        except Exception:
+            pass
+    finally:
+        import threading
+        threading.Timer(300, _auto_sync_all_events).start()  # every 5 minutes
+
+# Pre-warm InsightFace model on startup (so first search is instant)
+def _prewarm_insight():
+    try:
+        _load_insight()
+        print("[INFO] InsightFace pre-warmed on startup")
+    except Exception as e:
+        print(f"[WARN] InsightFace pre-warm failed: {e}")
+
+import threading as _threading
+_threading.Thread(target=_prewarm_insight, daemon=True).start()
+_threading.Timer(10, _auto_sync_all_events).start()  # start auto-sync after 10s
+
 # ── Payment settings helpers ──────────────────────────────────────────────────
 
 PAYMENT_DEFAULTS = {
@@ -569,7 +611,7 @@ def find_matches(selfie_path: Path, images_dir: Path) -> list:
             return []
         with open(str(enc_path), "rb") as f:
             encodings = pickle.load(f)
-        threshold = 0.40   # cosine similarity — higher = stricter match
+        threshold = 0.35   # cosine similarity — higher = stricter match
         matches, seen = [], set()
         for entry in encodings:
             emb        = entry["embedding"].astype(np.float32)
