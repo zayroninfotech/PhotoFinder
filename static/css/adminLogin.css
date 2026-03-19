@@ -1,18 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Login – Zayron Infotech</title>
-   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       min-height: 100vh;
       display: flex;
       font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #e7db37;
+      background: #000000;
       overflow: hidden;
     }
 
@@ -220,7 +213,7 @@
       background-clip: text;
     }
     .left-text p {
-      color: #5189c1; font-size: .88rem; line-height: 1.6;
+      color: #93aad8; font-size: .88rem; line-height: 1.6;
       max-width: 320px; margin: 0 auto 28px;
     }
 
@@ -240,7 +233,7 @@
   border-left:2px solid #f59e0b;
   border-radius:12px;
   padding:14px 18px;
-  color:#0d0f11;
+  color:#93aad8;
   font-size:.82rem;
   flex:1;
 }
@@ -262,9 +255,8 @@
     .right-panel {
       width: 460px;
       min-width: 380px;
-      background: #f3f4f4;
+      background: #050810;
       border-left: 1px solid rgba(59,130,246,0.1);
-      
       display: flex;
       align-items: center;
       justify-content: center;
@@ -284,18 +276,21 @@
     .login-box { width: 100%; }
 
     /* Brand */
-    .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+    .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
     .brand-logo-wrap {
+      flex-shrink: 0;
+      background: #fff;
       border-radius: 12px;
-    
+      padding: 6px 10px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.2), 0 4px 20px rgba(245,158,11,0.2);
     }
     .brand-logo {
-      height: 100px; width: auto; 
-      background: transparent !important;
+      height: 48px; width: auto; max-width: 110px;
       object-fit: contain; display: block;
     }
     .brand-name {
-      color: #000000; font-size: 1.1rem; font-weight: 800;
+      color: #f0f4ff; font-size: 1.1rem; font-weight: 800;
       line-height: 1.2;
     }
     .brand-name span {
@@ -305,7 +300,7 @@
       background-clip: text;
     }
     .brand-sub {
-      color: #111316; font-size: .73rem; margin-top: 5px;
+      color: #93aad8; font-size: .73rem; margin-top: 5px;
       text-transform: uppercase; letter-spacing: .06em;
     }
 
@@ -316,7 +311,7 @@
     }
 
     label {
-      display: block; color: #0d0f11;
+      display: block; color: #93aad8;
       font-size: .73rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: .08em;
       margin-bottom: 6px;
@@ -324,8 +319,8 @@
     input[type="text"], input[type="password"] {
       width: 100%;
       padding: 12px 16px;
-      background: #1b2a56;
-      border: 1px solid rgba(69, 117, 192, 0.1);
+      background: #080c18;
+      border: 1px solid rgba(59,130,246,0.1);
       border-radius: 10px;
       color: #e8eeff; font-size: .95rem;
       outline: none;
@@ -336,12 +331,12 @@
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
     }
-    input::placeholder { color: #cfd4e0; }
+    input::placeholder { color: #141c2e; }
 
     /* Button — blue to gold gradient */
     .btn {
       width: 100%; padding: 13px;
-      background: linear-gradient(135deg, #1d4ed8, #1d4ed8 10%, #03416d 30%, #f59e0b 75%, #fbbf24 100%);
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6 40%, #f59e0b 75%, #fbbf24 100%);
       border: none; border-radius: 10px;
       color: #fff; font-size: 1rem; font-weight: 800;
       cursor: pointer;
@@ -364,14 +359,14 @@
     .register-row {
       display: flex; align-items: center; justify-content: center;
       gap: 10px; margin-top: 16px;
-      color: #060709; font-size: .82rem;
+      color: #93aad8; font-size: .82rem;
     }
     .btn-register {
       padding: 7px 18px;
-      background: rgb(9, 46, 70);
-      border: 1px solid rgba(8, 4, 48, 0.35);
+      background: transparent;
+      border: 1px solid rgba(59,130,246,0.35);
       border-radius: 8px;
-      color: #f8f8fd; font-size: .82rem; font-weight: 600;
+      color: #60a5fa; font-size: .82rem; font-weight: 600;
       text-decoration: none;
       transition: background .2s, border-color .2s;
     }
@@ -382,12 +377,12 @@
     }
 
     .footer-hint {
-      text-align: center; color: #0d0f11;
+      text-align: center; color: #4f6290;
       font-size: .72rem; margin-top: 24px;
       padding-top: 18px;
       border-top: 1px solid rgba(59,130,246,0.06);
     }
-    .footer-hint strong { color: hsl(210, 17%, 2%); }
+    .footer-hint strong { color: #93aad8; }
 
     /* ── Responsive ──────────────────────────────────────── */
     @media (max-width: 820px) {
@@ -397,242 +392,5 @@
       .th1,.th2,.th3,.th4,.th5,.th6 { display: none; }
       .right-panel { width: 100%; min-width: unset; border-left: none; border-top: 1px solid rgba(59,130,246,0.1); }
     }
+
     
-  </style>
-</head>
-<body>
-
-<!-- ─── Page Loader ─────────────────────────────── -->
-<div id="pgLoader"><div class="pg-spin"></div></div>
-<style>
-  #pgLoader{position:fixed;inset:0;z-index:99999;background:#000010;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,visibility .45s ease;}
-  #pgLoader.done{opacity:0;visibility:hidden;pointer-events:none;}
-  .pg-spin{width:56px;height:56px;border-radius:50%;border:4px solid rgba(255,255,255,0.07);border-top:4px solid #3b82f6;border-right:4px solid #f59e0b;animation:pgSpin .75s linear infinite;}
-  @keyframes pgSpin{to{transform:rotate(360deg);}}
-</style>
-<script>(function(){var L=document.getElementById('pgLoader');function h(){L.classList.add('done');}window.addEventListener('load',h);window.addEventListener('pageshow',function(e){if(e.persisted)h();});setTimeout(h,6000);})();</script>
-
-
-  <!-- ── LEFT PANEL ─────────────────────────────────────── -->
-  <div class="left-panel">
-    <div class="top-strip"></div>
-
-    <div class="scan-wrap">
-      <div class="orbit"></div>
-      <div class="orbit orbit-2"></div>
-      <div class="match-pulse"></div>
-
-      <!-- Top corners blue, bottom corners gold -->
-      <div class="corner c-tl"></div>
-      <div class="corner c-tr"></div>
-      <div class="corner c-bl"></div>
-      <div class="corner c-br"></div>
-
-      <div class="face-frame">
-        <svg class="face-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="60" cy="56" rx="36" ry="42" fill="rgba(5,15,40,0.7)" stroke="rgba(59,130,246,0.45)" stroke-width="1.5"/>
-          <!-- Eyes — blue outer, gold pupil -->
-          <ellipse cx="46" cy="50" rx="6" ry="7" fill="rgba(59,130,246,0.1)" stroke="#3b82f6" stroke-width="1.2"/>
-          <ellipse cx="74" cy="50" rx="6" ry="7" fill="rgba(59,130,246,0.1)" stroke="#3b82f6" stroke-width="1.2"/>
-          <circle cx="46" cy="50" r="3" fill="#f59e0b" opacity=".9"/>
-          <circle cx="74" cy="50" r="3" fill="#f59e0b" opacity=".9"/>
-          <!-- Nose — gold -->
-          <path d="M60 56 L55 68 Q60 71 65 68 Z" stroke="rgba(245,158,11,0.5)" stroke-width="1" fill="none"/>
-          <!-- Mouth — blue -->
-          <path d="M48 78 Q60 86 72 78" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-          <!-- Eyebrows — gold -->
-          <path d="M39 43 Q46 39 53 42" stroke="rgba(245,158,11,0.7)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          <path d="M67 42 Q74 39 81 43" stroke="rgba(245,158,11,0.7)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          <!-- Ears — blue -->
-          <path d="M24 54 Q20 56 22 62 Q24 68 26 64" stroke="rgba(59,130,246,0.3)" stroke-width="1" fill="none"/>
-          <path d="M96 54 Q100 56 98 62 Q96 68 94 64" stroke="rgba(59,130,246,0.3)" stroke-width="1" fill="none"/>
-          <!-- Eye sparkle -->
-          <circle cx="49" cy="47" r="1.2" fill="#fff" opacity=".8"/>
-          <circle cx="77" cy="47" r="1.2" fill="#fff" opacity=".8"/>
-        </svg>
-      </div>
-
-      <div class="scan-line"></div>
-
-      <!-- Alternating blue/gold dot nodes -->
-      <div class="dot-node dn-blue dn1"></div>
-      <div class="dot-node dn-gold dn2"></div>
-      <div class="dot-node dn-blue dn3"></div>
-      <div class="dot-node dn-gold dn4"></div>
-      <div class="dot-node dn-blue dn5"></div>
-      <div class="dot-node dn-gold dn6"></div>
-
-      <!-- Alternating blue/gold thumb borders -->
-     <div class="thumb t-blue th1"
-     style="
-     width:60px;height:60px;
-     display:flex;align-items:center;justify-content:center;
-     border-radius:14px;
-     font-size:22px;
-     color:#4fc3ff;
-     background:rgba(255,255,255,0.05);
-     border:1px solid rgba(0,153,255,0.6);
-     box-shadow:0 0 10px rgba(0,153,255,0.6), 0 0 20px rgba(0,153,255,0.4);
-     ">
-🖼
-</div>
-
-<div class="thumb t-gold th2"
-     style="
-     width:60px;height:60px;
-     display:flex;align-items:center;justify-content:center;
-     border-radius:14px;
-     font-size:22px;
-     color:#ffd54f;
-     background:rgba(255,255,255,0.05);
-     border:1px solid rgba(255,200,0,0.7);
-     box-shadow:0 0 10px rgba(255,200,0,0.7), 0 0 20px rgba(255,200,0,0.5);
-     ">
-📷
-</div>
-
-<div class="thumb t-blue th3"
-     style="
-     width:60px;height:60px;
-     display:flex;align-items:center;justify-content:center;
-     border-radius:14px;
-     font-size:22px;
-     color:#4fc3ff;
-     background:rgba(255,255,255,0.05);
-     border:1px solid rgba(0,153,255,0.6);
-     box-shadow:0 0 10px rgba(0,153,255,0.6), 0 0 20px rgba(0,153,255,0.4);
-     ">
-🤳
-</div>
-
-<div class="thumb t-gold th4"
-     style="
-     width:60px;height:60px;
-     display:flex;align-items:center;justify-content:center;
-     border-radius:14px;
-     font-size:22px;
-     color:#ffd54f;
-     background:rgba(255,255,255,0.05);
-     border:1px solid rgba(255,200,0,0.7);
-     box-shadow:0 0 10px rgba(255,200,0,0.7), 0 0 20px rgba(255,200,0,0.5);
-     ">
-📸
-</div>
-
-<div class="thumb t-blue th5"
-     style="
-     width:60px;height:60px;
-     display:flex;align-items:center;justify-content:center;
-     border-radius:14px;
-     font-size:22px;
-     color:#4fc3ff;
-     background:rgba(255,255,255,0.05);
-     border:1px solid rgba(0,153,255,0.6);
-     box-shadow:0 0 10px rgba(0,153,255,0.6), 0 0 20px rgba(0,153,255,0.4);
-     ">
-🖼
-</div>
-
-<div class="thumb t-gold th6"
-     style="
-     width:60px;height:60px;
-     display:flex;align-items:center;justify-content:center;
-     border-radius:14px;
-     font-size:22px;
-     color:#ffd54f;
-     background:rgba(255,255,255,0.05);
-     border:1px solid rgba(255,200,0,0.7);
-     box-shadow:0 0 10px rgba(255,200,0,0.7), 0 0 20px rgba(255,200,0,0.5);
-     ">
-📷
-</div>
-    </div>
-
-    <div class="left-text">
-      <h2>Find Your Photos <em>Instantly</em></h2>
-      <p>AI-powered face recognition finds every photo of you from any event in seconds.</p>
-    </div>
-
-    <div class="features">
-      <div class="feat">
-          <span class="fi">🤳</span>
-          <div>
-            <strong style="display:block; margin-bottom:2px;">Upload a Selfie</strong>
-            <span style="font-size:12px; color:#c2d2ff">Our AI scans your face</span>
-          </div>
-      </div>
-
-      <div class="feat">
-          <span class="fi">🔍</span>
-          <div>
-              <strong style="display:block; margin-bottom:2px;">Face Recognition</strong>
-              <span style="font-size:12px; color:#c2d2ff">Matches across all event photos</span>
-          </div>
-      </div>
-
-      <div class="feat">
-          <span class="fi" style=" color:#c2d2ff">⬇</span>
-          <div>
-              <strong style="display:block; margin-bottom:2px;">Download or Email</strong>
-              <span style="font-size:12px; color:#c2d2ff"> your photos instantly</span>
-          </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ── RIGHT PANEL ────────────────────────────────────── -->
-  <div class="right-panel">
-    <div class="login-box">
-
-      <div class="brand" style="display:flex; justify-content:center; align-items:center;" >
-        <div class="brand-logo-wrap" >
-          <img  src="/static/logo.png" alt="Zayron Infotech" class="brand-logo" style="background:transparent">
-        </div>
-       
-      </div>
-       <div style=" text-align: center; font-size: 2.2rem; font-weight: 700; color: #02032e; margin-bottom: 4px;">
-          <div class="brand-name" style="font-size: 2.2rem;color: #02032e;">Zayro Lens</div>
-          <p class="brand-sub mb-2" style="margin:4px 0 0;">PhotoFinder — Admin Portal</p>
-        </div>
-
-      <div class="divider"></div>
-
-      {% if error %}
-      <div class="error-box"><span>⚠</span> {{ error }}</div>
-      {% endif %}
-
-      <form method="POST" action="/admin/login">
-        <label>Username</label>
-        <input type="text" name="username" placeholder="Enter username"
-               value="{{ request.form.get('username','') }}" autocomplete="username">
-
-        <label>Password</label>
-        <input type="password" name="password" placeholder="Enter password"
-               autocomplete="current-password">
-
-        <button class="btn" type="submit">Sign In →</button>
-      </form>
-
-      <!-- Create Account button — COMMENTED OUT (contact admin to register)
-      <div class="register-row">
-        <span>New here?</span>
-        <a href="/admin/register" class="btn-register">Create Account</a>
-      </div>
-      -->
-
-      <div style="text-align:center;margin-top:14px;">
-        <a href="/superadmin/login" style="font-size:12px;color:#4a5568;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:color .2s;" onmouseover="this.style.color='#8b5cf6'" onmouseout="this.style.color='#4a5568'">
-          👑 Superadmin Login
-        </a>
-      </div>
-
-      <p class="footer-hint">
-        Authorized personnel only &bull; <strong>Zayron Infotech Pvt. Ltd.</strong>
-      </p>
-
-    </div>
-  </div>
-
-</body>
-</html>
