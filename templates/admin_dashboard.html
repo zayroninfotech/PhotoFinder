@@ -571,8 +571,9 @@
       <button class="btn-copy" onclick="copyUrl()">
         🔗 Copy User Link
       </button>
-      <button class="btn-reindex" id="reindexBtn" onclick="reindexEvent()" style="background:#f59e0b;color:#000;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;width:100%;margin-top:6px;">
-        🔄 Re-index Photos from Drive
+      <button class="btn-reindex" id="reindexBtn" onclick="reindexEvent()" style="background:#f59e0b;color:#000;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;width:100%;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s;">
+        <span id="reindexSpinner" style="display:none;width:16px;height:16px;border:2px solid #0006;border-top-color:#000;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></span>
+        <span id="reindexBtnText">🔄 Re-index Photos from Drive</span>
       </button>
     </div>
 
@@ -701,7 +702,7 @@
     document.getElementById('statusBar').style.display = 'flex';
   }
 
-  function startStatusPoll(eventId) {
+  function startStatusPoll(eventId, isReindex) {
     clearInterval(statusInterval);
     statusInterval = setInterval(async () => {
       const r = await fetch(`/admin/status/${eventId}`);
@@ -716,6 +717,7 @@
       if (d.overall === 'ready') {
         spin.style.borderTopColor = '#22c55e';
         clearInterval(statusInterval);
+        if (isReindex) setReindexLoading(false);
         // Update badge in list
         const item = document.querySelector(`[data-id="${eventId}"] .badge`);
         if (item) { item.className = 'badge badge-green'; item.textContent = 'ready'; }
@@ -726,6 +728,7 @@
       } else if (d.overall === 'error') {
         spin.style.borderTopColor = '#ef4444';
         clearInterval(statusInterval);
+        if (isReindex) setReindexLoading(false);
         toast('❌ Processing error: ' + d.message, '#ef4444');
       }
     }, 3000);
@@ -780,29 +783,33 @@
     });
   }
 
+  function setReindexLoading(on) {
+    const btn     = document.getElementById('reindexBtn');
+    const spinner = document.getElementById('reindexSpinner');
+    const txt     = document.getElementById('reindexBtnText');
+    btn.disabled          = on;
+    btn.style.opacity     = on ? '0.75' : '1';
+    btn.style.cursor      = on ? 'not-allowed' : 'pointer';
+    spinner.style.display = on ? 'inline-block' : 'none';
+    txt.textContent       = on ? 'Re-indexing…' : '🔄 Re-index Photos from Drive';
+  }
+
   function reindexEvent() {
     if (!currentEventId) return;
-    const btn = document.getElementById('reindexBtn');
-    btn.disabled = true;
-    btn.textContent = '⏳ Re-indexing...';
+    setReindexLoading(true);
     fetch(`/admin/reindex/${currentEventId}`, { method: 'POST' })
       .then(r => r.json())
       .then(d => {
         if (d.ok) {
-          btn.textContent = '✅ Re-indexing started!';
-          startStatusPoll(currentEventId);
-          setTimeout(() => {
-            btn.disabled = false;
-            btn.textContent = '🔄 Re-index Photos from Drive';
-          }, 5000);
+          startStatusPoll(currentEventId, true);   // pass reindex=true
         } else {
-          btn.textContent = '❌ ' + (d.error || 'Failed');
-          btn.disabled = false;
+          setReindexLoading(false);
+          toast('❌ ' + (d.error || 'Re-index failed'), '#ef4444');
         }
       })
       .catch(() => {
-        btn.textContent = '❌ Error';
-        btn.disabled = false;
+        setReindexLoading(false);
+        toast('❌ Network error', '#ef4444');
       });
   }
 

@@ -72,13 +72,15 @@ def _ucol():
     return db["users"] if db is not None else None
 
 # InsightFace is loaded lazily to avoid OOM on startup
-_insight_app = None
-FACE_OK      = False
+_insight_app  = None
+FACE_OK       = False
+_insight_tried = False   # only warn once
 
 def _load_insight():
-    global _insight_app, FACE_OK
-    if _insight_app is not None:
+    global _insight_app, FACE_OK, _insight_tried
+    if _insight_tried:          # already attempted — return cached result
         return FACE_OK
+    _insight_tried = True
     try:
         from insightface.app import FaceAnalysis
         _insight_app = FaceAnalysis(name="buffalo_sc",
@@ -138,7 +140,8 @@ _sync_locks = {}   # per-event lock to prevent concurrent syncs
 
 def _auto_sync_all_events():
     """Background job — runs every 15 min.
-       FAST check: lists Drive files first, only downloads if new files detected."""
+       Re-runs gdown for each ready event (gdown skips already-downloaded files).
+       Only triggers reindex if new images appear in the images/ dir."""
     import threading
     try:
         if EVENTS.exists():
@@ -158,17 +161,25 @@ def _auto_sync_all_events():
                     continue
                 if _sync_locks.get(event_dir.name):
                     continue
-                # Fast check: list Drive files and compare with local
+                # Check local image count vs encoded count to detect new files
                 try:
-                    drive_files  = list_drive_images(folder_id)
-                    drive_names  = {f["name"] for f in drive_files}
-                    images_dir   = event_dir / "images"
-                    local_names  = {p.name for p in images_dir.rglob("*")
-                                    if p.suffix.lower() in IMG_EXTS}
-                    new_files    = drive_names - local_names
-                    if not new_files:
-                        continue   # nothing new — skip entirely
-                    print(f"[AUTO-SYNC] {event_dir.name}: {len(new_files)} new photo(s) found")
+                    images_dir    = event_dir / "images"
+                    enc_path      = event_dir / "face_encodings.pkl"
+                    local_imgs    = {p.name for p in images_dir.rglob("*")
+                                     if p.suffix.lower() in IMG_EXTS} if images_dir.exists() else set()
+                    encoded_names = set()
+                    if enc_path.exists():
+                        import pickle as _pkl
+                        try:
+                            with open(str(enc_path), "rb") as _f:
+                                for _e in _pkl.load(_f):
+                                    encoded_names.add(_e["filename"])
+                        except Exception:
+                            pass
+                    new_local = local_imgs - encoded_names
+                    if not new_local:
+                        continue   # nothing new locally — skip
+                    print(f"[AUTO-SYNC] {event_dir.name}: {len(new_local)} new photo(s) found")
                     _sync_locks[event_dir.name] = True
                     def _run(eid):
                         try:
@@ -177,7 +188,7 @@ def _auto_sync_all_events():
                             _sync_locks.pop(eid, None)
                     threading.Thread(target=_run, args=(event_dir.name,), daemon=True).start()
                 except Exception:
-                    pass   # Drive API failed — skip this event silently
+                    pass   # skip silently on error
     except Exception as e:
         try:
             print(f"[WARN] Auto-sync error: {e}")
@@ -436,99 +447,95 @@ def get_folder_id(link: str):
     m = re.search(r"/folders/([a-zA-Z0-9_-]+)", link)
     return m.group(1) if m else None
 
-def list_drive_images(folder_id: str) -> list:
-    url = "https://drive.google.com/drive/folders/" + folder_id
-    files = []
+def _scrape_drive_files(folder_id: str) -> list:
+    """
+    Use Google Drive embeddedfolderview (static HTML, no JS needed) to get
+    [{"id": FILE_ID, "name": FILENAME, "thumb": THUMB_URL}, ...] for images.
+    """
+    url = f"https://drive.google.com/embeddedfolderview?id={folder_id}#list"
+    files, seen_ids = [], set()
+    _IMG_RE = r'\.(?:jpe?g|png|webp|bmp|gif)'
     try:
-        import gdown
-        file_list = gdown.download_folder(
-            url, output="/tmp/_gdown_tmp_", quiet=True, skip_download=True)
-        if file_list:
-            return [{"id": f, "name": Path(f).name} for f in file_list
-                    if Path(f).suffix.lower() in IMG_EXTS]
-    except Exception:
-        pass
-    try:
-        resp = requests.get(
-            "https://drive.google.com/drive/folders/" + folder_id,
-            headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
-        ids = re.findall(r'"([a-zA-Z0-9_-]{28,})"', resp.text)
-        seen = set()
-        for fid in ids:
-            if fid not in seen:
-                seen.add(fid)
-                files.append({"id": fid, "name": fid + ".jpg"})
-    except Exception:
-        pass
+        resp = requests.get(url, timeout=20, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
+        })
+        text = resp.text
+        # Each entry: id="entry-{FILE_ID}" ... flip-entry-title">{FILENAME}</div>
+        for fid, fname in re.findall(
+            r'id="entry-([a-zA-Z0-9_-]{25,44})"[^>]*>.*?'
+            r'flip-entry-title">(.*?)</div>',
+            text, re.IGNORECASE | re.DOTALL
+        ):
+            fname = fname.strip()
+            if re.search(_IMG_RE, fname, re.IGNORECASE) and fid not in seen_ids:
+                seen_ids.add(fid)
+                files.append({"id": fid, "name": fname})
+        # Fallback: extract IDs from /file/d/ links + image names, pair by order
+        if not files:
+            ids   = re.findall(r'/file/d/([a-zA-Z0-9_-]{25,44})', text)
+            names = re.findall(r'flip-entry-title">(.*?)</div>', text)
+            img_pairs = [(i, n) for i, n in zip(ids, names)
+                         if re.search(_IMG_RE, n, re.IGNORECASE)]
+            for fid, fname in img_pairs:
+                if fid not in seen_ids:
+                    seen_ids.add(fid)
+                    files.append({"id": fid, "name": fname.strip()})
+    except Exception as e:
+        print(f"[WARN] Drive embeddedfolderview scrape: {e}")
     return files
 
-def download_drive_folder(folder_id: str, dest: Path, status_path: Path):
-    dest.mkdir(parents=True, exist_ok=True)
-    _set_status(status_path, "downloading", "Downloading images from Drive…")
-    downloaded = 0
-    errors = 0
-    try:
-        import gdown
-        url = "https://drive.google.com/drive/folders/" + folder_id
-        gdown.download_folder(url, output=str(dest), quiet=True, use_cookies=False)
-        imgs = [p for p in dest.rglob("*") if p.suffix.lower() in IMG_EXTS]
-        downloaded = len(imgs)
-        _set_status(status_path, "downloaded", f"Downloaded {downloaded} image(s) via gdown")
-        return
-    except Exception as e:
-        _set_status(status_path, "downloading", f"gdown failed ({e}), trying direct…")
 
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    import threading
-    counter_lock = threading.Lock()
-
-    file_list = list_drive_images(folder_id)
-
-    def _dl_one(item):
-        fid, name = item["id"], item["name"]
-        out = dest / name
-        if out.exists():
-            return "skip"
+def _download_drive_file(file_id: str, dest: Path) -> bool:
+    """Download a single public Drive file directly via requests (no gdown)."""
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                             "AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"}
+    urls = [
+        f"https://drive.google.com/thumbnail?id={file_id}&sz=w2000",
+        f"https://lh3.googleusercontent.com/d/{file_id}=w2000",
+        f"https://drive.google.com/uc?export=download&id={file_id}",
+    ]
+    for url in urls:
         try:
-            dl_url = f"https://drive.google.com/uc?export=download&id={fid}"
-            r = requests.get(dl_url, timeout=30, stream=True)
-            if r.status_code == 200 and "image" in r.headers.get("Content-Type", ""):
-                with open(out, "wb") as f:
-                    for chunk in r.iter_content(8192):
-                        f.write(chunk)
-                return "ok"
+            r = requests.get(url, timeout=60, stream=True, headers=headers)
+            ct = r.headers.get("Content-Type", "")
+            if r.status_code == 200 and "image" in ct:
+                dest.write_bytes(r.content)
+                return True
+            # Handle Google virus-scan confirm page
+            if r.status_code == 200 and "confirm" in r.text[:800].lower():
+                token = re.search(r'confirm=([0-9A-Za-z_-]+)', r.text)
+                if token:
+                    r2 = requests.get(
+                        f"https://drive.google.com/uc?export=download"
+                        f"&id={file_id}&confirm={token.group(1)}",
+                        timeout=60, stream=True, headers=headers)
+                    if r2.status_code == 200 and "image" in r2.headers.get("Content-Type", ""):
+                        dest.write_bytes(r2.content)
+                        return True
         except Exception:
-            pass
-        return "err"
+            continue
+    return False
 
-    results = {"ok": 0, "skip": 0, "err": 0}
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        futures = {pool.submit(_dl_one, item): item for item in file_list[:200]}
-        for fut in as_completed(futures):
-            r = fut.result()
-            with counter_lock:
-                results[r] += 1
-            total = results["ok"] + results["skip"]
-            _set_status(status_path, "downloading", f"Downloading images from Drive… {total} photos")
-
-    downloaded = results["ok"] + results["skip"]
-    _set_status(status_path, "downloaded", f"Downloaded {downloaded} image(s) ({results['err']} errors)")
 
 def build_encodings(event_dir: Path, status_path: Path):
+    """
+    Build/update face encodings for an event.
+    1. Scrape Drive folder HTML → get file IDs
+    2. Download each photo directly via requests (no gdown)
+    3. Encode with InsightFace (incremental — skip already-encoded)
+    FALLBACK: if scraping returns 0, try gdown; if that also fails → error
+    """
     import pickle, numpy as np
+    from concurrent.futures import ThreadPoolExecutor as _TPE, as_completed as _ac
+    import threading as _th
+
+    meta       = _load_meta(event_dir / "meta.json")
+    folder_id  = meta.get("folder_id", "")
+    enc_path   = event_dir / "face_encodings.pkl"
     images_dir = event_dir / "images"
-    imgs = [p for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS]
-    if not imgs:
-        msg = ("No images found. Make sure your Google Drive folder is shared "
-               "publicly (Anyone with the link → Viewer).")
-        _set_status(status_path, "error", msg)
-        _meta = _load_meta(event_dir / "meta.json")
-        _meta["status"] = "error"
-        _save_meta(event_dir / "meta.json", _meta)
-        return
-    _set_status(status_path, "indexing", f"Indexing {len(imgs)} photo(s) with InsightFace…")
-    enc_path = event_dir / "face_encodings.pkl"
-    # Load existing encodings to skip already-processed photos
+
+    # Load existing encodings (incremental — skip already-processed filenames)
     existing = {}
     if enc_path.exists():
         try:
@@ -537,18 +544,59 @@ def build_encodings(event_dir: Path, status_path: Path):
                     existing[entry["filename"]] = entry
         except Exception:
             existing = {}
+
+    # ── STEP 1: Scrape Drive folder for file IDs ──────────────────────────────
+    if folder_id:
+        _set_status(status_path, "downloading", "Scanning Drive folder…")
+        drive_files = _scrape_drive_files(folder_id)
+
+        if drive_files:
+            images_dir.mkdir(parents=True, exist_ok=True)
+            to_download = [f for f in drive_files
+                           if not (images_dir / f["name"]).exists()]
+            if to_download:
+                _set_status(status_path, "downloading",
+                            f"Downloading {len(to_download)} new photo(s)…")
+                def _dl(item):
+                    dest = images_dir / item["name"]
+                    ok = _download_drive_file(item["id"], dest)
+                    if not ok:
+                        print(f"[WARN] Could not download {item['name']}")
+                with _TPE(max_workers=4) as pool:
+                    list(pool.map(_dl, to_download))
+        else:
+            # Scraping returned 0 — set error, folder may not be public
+            _set_status(status_path, "error",
+                        "No images found. Make sure your Google Drive folder is "
+                        "shared publicly (Anyone with the link → Viewer).")
+            meta["status"] = "error"
+            _save_meta(event_dir / "meta.json", meta)
+            return
+
+    # ── STEP 2: Encode all local images ───────────────────────────────────────
+    imgs = []
+    if images_dir.exists():
+        imgs = [p for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS]
+
+    if not imgs:
+        msg = ("No images found. Make sure your Google Drive folder is shared "
+               "publicly (Anyone with the link → Viewer).")
+        _set_status(status_path, "error", msg)
+        meta["status"] = "error"
+        _save_meta(event_dir / "meta.json", meta)
+        return
+
+    _set_status(status_path, "indexing", f"Indexing {len(imgs)} photo(s)…")
+
     if _load_insight():
         import cv2
-        from concurrent.futures import ThreadPoolExecutor as _TPE
-        import threading as _th
-
-        to_process = [p for p in imgs if p.name not in existing]
-        cached     = [existing[p.name] for p in imgs if p.name in existing]
-        _lock      = _th.Lock()
+        to_process  = [p for p in imgs if p.name not in existing]
+        cached      = [existing[p.name] for p in imgs if p.name in existing]
+        _lock       = _th.Lock()
         new_entries = list(cached)
         done_count  = [len(cached)]
 
-        def _encode_one(img_path):
+        def _encode_local(img_path):
             try:
                 img = cv2.imread(str(img_path))
                 if img is None:
@@ -558,15 +606,18 @@ def build_encodings(event_dir: Path, status_path: Path):
                 for face in faces:
                     emb = face.embedding.astype(np.float32)
                     emb = emb / np.linalg.norm(emb)
-                    result.append({"path": str(img_path), "filename": img_path.name, "embedding": emb})
+                    result.append({
+                        "path":      str(img_path),
+                        "filename":  img_path.name,
+                        "embedding": emb,
+                    })
                 return result
             except Exception:
                 return []
 
         with _TPE(max_workers=4) as pool:
-            futures = {pool.submit(_encode_one, p): p for p in to_process}
-            from concurrent.futures import as_completed as _ac
-            for fut in _ac(futures):
+            futs = {pool.submit(_encode_local, p): p for p in to_process}
+            for fut in _ac(futs):
                 entries = fut.result()
                 with _lock:
                     new_entries.extend(entries)
@@ -576,56 +627,20 @@ def build_encodings(event_dir: Path, status_path: Path):
 
         with open(str(enc_path), "wb") as f:
             pickle.dump(new_entries, f)
-    meta = _load_meta(event_dir / "meta.json")
+
     meta["status"]      = "ready"
     meta["photo_count"] = len(imgs)
     _save_meta(event_dir / "meta.json", meta)
     _set_status(status_path, "ready", f"Ready – {len(imgs)} photos indexed")
 
+
 def reindex_event_bg(event_id: str):
-    """Only download NEW photos and encode only new ones (keeps existing pkl cache)."""
+    """Check Drive for new photos and encode only new ones (no full download needed)."""
     event_dir   = EVENTS / event_id
-    images_dir  = event_dir / "images"
     status_path = event_dir / "status.json"
     meta        = _load_meta(event_dir / "meta.json")
-    folder_id   = meta.get("folder_id", "")
     try:
-        # Snapshot existing files before download
-        before = {p.name for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS}
         _set_status(status_path, "downloading", "Checking Drive for new photos…")
-        # Download only — gdown skips existing files automatically
-        try:
-            import gdown
-            url = "https://drive.google.com/drive/folders/" + folder_id
-            gdown.download_folder(url, output=str(images_dir), quiet=True, use_cookies=False)
-        except Exception:
-            file_list = list_drive_images(folder_id)
-            for item in file_list[:200]:
-                fid, name = item["id"], item["name"]
-                out = images_dir / name
-                if out.exists():          # skip already downloaded
-                    continue
-                try:
-                    dl_url = f"https://drive.google.com/uc?export=download&id={fid}"
-                    r = requests.get(dl_url, timeout=20, stream=True)
-                    if r.status_code == 200 and "image" in r.headers.get("Content-Type", ""):
-                        with open(out, "wb") as f:
-                            for chunk in r.iter_content(8192):
-                                f.write(chunk)
-                except Exception:
-                    pass
-        after = {p.name for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS}
-        new_count = len(after - before)
-        total     = len(after)
-        if new_count == 0:
-            _set_status(status_path, "ready", f"No new photos found – {total} photos indexed")
-            meta["status"] = "ready"
-            meta["photo_count"] = total
-            _save_meta(event_dir / "meta.json", meta)
-            return
-        # Only re-build encodings because new files arrived
-        # DeepFace detects new files and only encodes them (pkl cache kept)
-        _set_status(status_path, "indexing", f"Encoding {new_count} new photo(s)…")
         build_encodings(event_dir, status_path)
     except Exception as e:
         _set_status(status_path, "error", str(e))
@@ -634,11 +649,11 @@ def reindex_event_bg(event_id: str):
 
 
 def process_event_bg(event_id: str):
+    """Initial event processing — calls build_encodings() which handles Drive thumbnails."""
     event_dir   = EVENTS / event_id
     status_path = event_dir / "status.json"
     meta        = _load_meta(event_dir / "meta.json")
     try:
-        download_drive_folder(meta["folder_id"], event_dir / "images", status_path)
         build_encodings(event_dir, status_path)
     except Exception as e:
         _set_status(status_path, "error", str(e))
@@ -673,12 +688,15 @@ def find_matches(selfie_path: Path, images_dir: Path) -> list:
             emb        = entry["embedding"].astype(np.float32)
             emb        = emb / np.linalg.norm(emb)
             similarity = float(np.dot(selfie_emb, emb))
-            if similarity >= threshold and entry["path"] not in seen:
-                seen.add(entry["path"])
+            # Dedup key: file_id (new Drive-based) or path (legacy local)
+            dedup_key  = entry.get("file_id") or entry.get("path", "")
+            if similarity >= threshold and dedup_key not in seen:
+                seen.add(dedup_key)
                 matches.append({
-                    "path":     entry["path"],
+                    "path":     entry.get("path", ""),
+                    "file_id":  entry.get("file_id", ""),
                     "filename": entry["filename"],
-                    "distance": round(1.0 - similarity, 4)
+                    "distance": round(1.0 - similarity, 4),
                 })
         matches.sort(key=lambda x: x["distance"])
         return matches
@@ -1612,23 +1630,35 @@ def upload_selfie(event_id):
 
 @app.route("/photo/<sid>/<int:idx>")
 def serve_photo(sid, idx):
-    """Serve matched photo at full original quality."""
+    """Serve matched photo — redirect to Drive (new) or serve local file (legacy)."""
     data = _load_meta(RES / sid / "matches.json")
     if not data or idx >= len(data["matches"]):
         return "Not found", 404
-    p = Path(data["matches"][idx]["path"])
-    if not p.exists():
-        return "Photo not found", 404
-    return send_file(str(p))
+    m   = data["matches"][idx]
+    fid = m.get("file_id")
+    if fid:
+        # Serve directly from Google Drive (original quality, no server storage)
+        return redirect(f"https://drive.google.com/uc?export=download&id={fid}")
+    # Legacy: local file
+    p = Path(m.get("path", ""))
+    if p.exists():
+        return send_file(str(p))
+    return "Photo not found", 404
 
 
 @app.route("/photo/<sid>/<int:idx>/thumb")
 def serve_photo_thumb(sid, idx):
-    """Serve a small thumbnail (max 400px) for fast grid preview."""
+    """Serve thumbnail — redirect to Drive thumbnail (new) or resize local file (legacy)."""
     data = _load_meta(RES / sid / "matches.json")
     if not data or idx >= len(data["matches"]):
         return "Not found", 404
-    p = Path(data["matches"][idx]["path"])
+    m   = data["matches"][idx]
+    fid = m.get("file_id")
+    if fid:
+        # Drive thumbnail URL — fast, no server load
+        return redirect(f"https://drive.google.com/thumbnail?id={fid}&sz=w400")
+    # Legacy: local thumbnail
+    p = Path(m.get("path", ""))
     if not p.exists():
         return "Photo not found", 404
     try:
@@ -1644,7 +1674,7 @@ def serve_photo_thumb(sid, idx):
 
 @app.route("/download/<sid>")
 def download_zip(sid):
-    """Stream matched photos as ZIP using a temp file — safe for large/many images."""
+    """Stream matched photos as ZIP. Fetches from Drive (new) or local files (legacy)."""
     data = _load_meta(RES / sid / "matches.json")
     if not data:
         return "Session not found", 404
@@ -1652,24 +1682,34 @@ def download_zip(sid):
     if not matches:
         return "No photos to download", 404
 
-    # Write ZIP to a temp file so we don't hold GBs in RAM
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
     tmp.close()
-    tmp_path = Path(tmp.name)
-
+    tmp_path   = Path(tmp.name)
     seen_names: set = set()
     try:
-        # ZIP_STORED: JPEG/PNG are already compressed; no point deflating
         with zipfile.ZipFile(str(tmp_path), "w", zipfile.ZIP_STORED) as zf:
             for m in matches:
-                p = Path(m["path"])
-                if not p.exists():
-                    continue
                 fname = m["filename"]
                 if fname in seen_names:
-                    fname = f"{p.stem}_{uuid.uuid4().hex[:4]}{p.suffix}"
+                    fname = f"{Path(fname).stem}_{uuid.uuid4().hex[:4]}{Path(fname).suffix}"
                 seen_names.add(fname)
-                zf.write(str(p), fname)
+
+                fid = m.get("file_id")
+                if fid:
+                    # Download from Drive on-the-fly
+                    try:
+                        r = requests.get(
+                            f"https://drive.google.com/uc?export=download&id={fid}",
+                            timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+                        if r.status_code == 200 and "image" in r.headers.get("Content-Type", ""):
+                            zf.writestr(fname, r.content)
+                            continue
+                    except Exception:
+                        pass
+                # Legacy: local file
+                p = Path(m.get("path", ""))
+                if p.exists():
+                    zf.write(str(p), fname)
 
         zip_size = tmp_path.stat().st_size
 
@@ -1677,15 +1717,13 @@ def download_zip(sid):
             try:
                 with open(str(tmp_path), "rb") as fh:
                     while True:
-                        chunk = fh.read(65536)   # 64 KB chunks
+                        chunk = fh.read(65536)
                         if not chunk:
                             break
                         yield chunk
             finally:
-                try:
-                    tmp_path.unlink(missing_ok=True)
-                except Exception:
-                    pass
+                try: tmp_path.unlink(missing_ok=True)
+                except Exception: pass
 
         return Response(
             stream_with_context(_generate()),
@@ -1703,15 +1741,16 @@ def download_zip(sid):
 
 @app.route("/photo/<sid>/info")
 def photo_info(sid):
-    """Return file sizes of matched photos for display in UI."""
+    """Return info about matched photos for display in UI."""
     data = _load_meta(RES / sid / "matches.json")
     if not data:
         return jsonify([])
     info = []
     for i, m in enumerate(data.get("matches", [])):
-        p = Path(m["path"])
+        p       = Path(m.get("path", ""))
         size_kb = round(p.stat().st_size / 1024, 1) if p.exists() else 0
-        info.append({"idx": i, "filename": m["filename"], "size_kb": size_kb})
+        info.append({"idx": i, "filename": m["filename"], "size_kb": size_kb,
+                     "from_drive": bool(m.get("file_id"))})
     return jsonify(info)
 
 
@@ -1726,9 +1765,27 @@ def send_email():
     if not data:
         return jsonify({"error": "Session not found"}), 404
     buf = io.BytesIO()
+    seen_names: set = set()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for m in data["matches"]:
-            zf.write(m["path"], m["filename"])
+            fname = m["filename"]
+            if fname in seen_names:
+                fname = f"{Path(fname).stem}_{uuid.uuid4().hex[:4]}{Path(fname).suffix}"
+            seen_names.add(fname)
+            fid = m.get("file_id")
+            if fid:
+                try:
+                    r = requests.get(
+                        f"https://drive.google.com/uc?export=download&id={fid}",
+                        timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+                    if r.status_code == 200 and "image" in r.headers.get("Content-Type", ""):
+                        zf.writestr(fname, r.content)
+                        continue
+                except Exception:
+                    pass
+            p = Path(m.get("path", ""))
+            if p.exists():
+                zf.write(str(p), fname)
     buf.seek(0)
     try:
         msg            = MIMEMultipart()
