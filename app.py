@@ -545,26 +545,11 @@ def build_encodings(event_dir: Path, status_path: Path):
             existing = {}
 
     # ── STEP 1: Scrape Drive folder for file IDs ──────────────────────────────
+    drive_files = []
     if folder_id:
         _set_status(status_path, "downloading", "Scanning Drive folder…")
         drive_files = _scrape_drive_files(folder_id)
-
-        if drive_files:
-            images_dir.mkdir(parents=True, exist_ok=True)
-            to_download = [f for f in drive_files
-                           if not (images_dir / f["name"]).exists()]
-            if to_download:
-                _set_status(status_path, "downloading",
-                            f"Downloading {len(to_download)} new photo(s)…")
-                def _dl(item):
-                    dest = images_dir / item["name"]
-                    ok = _download_drive_file(item["id"], dest)
-                    if not ok:
-                        print(f"[WARN] Could not download {item['name']}")
-                with _TPE(max_workers=4) as pool:
-                    list(pool.map(_dl, to_download))
-        else:
-            # Scraping returned 0 — set error, folder may not be public
+        if not drive_files:
             _set_status(status_path, "error",
                         "No images found. Make sure your Google Drive folder is "
                         "shared publicly (Anyone with the link → Viewer).")
@@ -572,65 +557,73 @@ def build_encodings(event_dir: Path, status_path: Path):
             _save_meta(event_dir / "meta.json", meta)
             return
 
-    # ── STEP 2: Encode all local images ───────────────────────────────────────
-    imgs = []
-    if images_dir.exists():
-        imgs = [p for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS]
-
-    if not imgs:
-        msg = ("No images found. Make sure your Google Drive folder is shared "
-               "publicly (Anyone with the link → Viewer).")
-        _set_status(status_path, "error", msg)
-        meta["status"] = "error"
+    # ── STEP 2: If InsightFace not available — store file IDs only (instant) ──
+    if not _load_insight():
+        # No face-matching possible; just register files so they can be served
+        new_entries = list(existing.values())
+        known = {e["filename"] for e in new_entries}
+        for f in drive_files:
+            if f["name"] not in known:
+                new_entries.append({"filename": f["name"], "file_id": f["id"], "embedding": None})
+        with open(str(enc_path), "wb") as fh:
+            pickle.dump(new_entries, fh)
+        photo_count = len(drive_files) or len(new_entries)
+        meta["status"]      = "ready"
+        meta["photo_count"] = photo_count
         _save_meta(event_dir / "meta.json", meta)
+        _set_status(status_path, "ready", f"Ready – {photo_count} photos indexed")
         return
 
-    _set_status(status_path, "indexing", f"Indexing {len(imgs)} photo(s)…")
+    # ── STEP 3: InsightFace available — download thumbnails + encode ───────────
+    import cv2, tempfile as _tf
+    to_encode = [f for f in drive_files if f["name"] not in existing]
+    cached    = [existing[f["name"]] for f in drive_files if f["name"] in existing]
+    _lock       = _th.Lock()
+    new_entries = list(cached)
+    done_count  = [len(cached)]
+    total       = len(drive_files)
 
-    if _load_insight():
-        import cv2
-        to_process  = [p for p in imgs if p.name not in existing]
-        cached      = [existing[p.name] for p in imgs if p.name in existing]
-        _lock       = _th.Lock()
-        new_entries = list(cached)
-        done_count  = [len(cached)]
+    _set_status(status_path, "indexing", f"Indexing {total} photo(s)…")
 
-        def _encode_local(img_path):
-            try:
-                img = cv2.imread(str(img_path))
-                if img is None:
-                    return []
-                faces = _insight_app.get(img)
-                result = []
-                for face in faces:
-                    emb = face.embedding.astype(np.float32)
-                    emb = emb / np.linalg.norm(emb)
-                    result.append({
-                        "path":      str(img_path),
-                        "filename":  img_path.name,
-                        "embedding": emb,
-                    })
-                return result
-            except Exception:
+    def _encode_drive(item):
+        fid, fname = item["id"], item["name"]
+        tmp = Path(_tf.mktemp(suffix=Path(fname).suffix or ".jpg"))
+        try:
+            if not _dl_thumb(fid, tmp):
                 return []
+            img = cv2.imread(str(tmp))
+            if img is None:
+                return []
+            faces = _insight_app.get(img)
+            result = []
+            for face in faces:
+                emb = face.embedding.astype(np.float32)
+                emb = emb / np.linalg.norm(emb)
+                result.append({"filename": fname, "file_id": fid, "embedding": emb})
+            return result
+        except Exception:
+            return []
+        finally:
+            try: tmp.unlink(missing_ok=True)
+            except Exception: pass
 
-        with _TPE(max_workers=4) as pool:
-            futs = {pool.submit(_encode_local, p): p for p in to_process}
-            for fut in _ac(futs):
-                entries = fut.result()
-                with _lock:
-                    new_entries.extend(entries)
-                    done_count[0] += 1
-                    _set_status(status_path, "indexing",
-                                f"Indexing photos… {done_count[0]}/{len(imgs)}")
+    with _TPE(max_workers=6) as pool:
+        futs = {pool.submit(_encode_drive, f): f for f in to_encode}
+        for fut in _ac(futs):
+            entries = fut.result()
+            with _lock:
+                new_entries.extend(entries)
+                done_count[0] += 1
+                _set_status(status_path, "indexing",
+                            f"Indexing photos… {done_count[0]}/{total}")
 
-        with open(str(enc_path), "wb") as f:
-            pickle.dump(new_entries, f)
+    with open(str(enc_path), "wb") as fh:
+        pickle.dump(new_entries, fh)
 
     meta["status"]      = "ready"
-    meta["photo_count"] = len(imgs)
+    meta["photo_count"] = total
     _save_meta(event_dir / "meta.json", meta)
-    _set_status(status_path, "ready", f"Ready – {len(imgs)} photos indexed")
+    _set_status(status_path, "ready", f"Ready – {total} photos indexed")
 
 
 def reindex_event_bg(event_id: str):
