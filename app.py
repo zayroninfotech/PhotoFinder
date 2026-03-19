@@ -88,9 +88,8 @@ def _load_insight():
         _insight_app.prepare(ctx_id=0, det_size=(320, 320))
         FACE_OK = True
         print("[INFO] InsightFace loaded OK")
-    except Exception as e:
-        print(f"[WARN] InsightFace unavailable: {e}")
-        FACE_OK = False
+    except Exception:
+        FACE_OK = False   # InsightFace not installed — face matching disabled
     return FACE_OK
 
 # ── App setup ──────────────────────────────────────────────────────────────────
