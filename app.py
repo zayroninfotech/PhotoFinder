@@ -478,24 +478,41 @@ def download_drive_folder(folder_id: str, dest: Path, status_path: Path):
     except Exception as e:
         _set_status(status_path, "downloading", f"gdown failed ({e}), trying direct…")
 
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import threading
+    counter_lock = threading.Lock()
+
     file_list = list_drive_images(folder_id)
-    for item in file_list[:200]:
+
+    def _dl_one(item):
         fid, name = item["id"], item["name"]
         out = dest / name
         if out.exists():
-            downloaded += 1
-            continue
+            return "skip"
         try:
             dl_url = f"https://drive.google.com/uc?export=download&id={fid}"
-            r = requests.get(dl_url, timeout=20, stream=True)
+            r = requests.get(dl_url, timeout=30, stream=True)
             if r.status_code == 200 and "image" in r.headers.get("Content-Type", ""):
                 with open(out, "wb") as f:
                     for chunk in r.iter_content(8192):
                         f.write(chunk)
-                downloaded += 1
+                return "ok"
         except Exception:
-            errors += 1
-    _set_status(status_path, "downloaded", f"Downloaded {downloaded} image(s) ({errors} errors)")
+            pass
+        return "err"
+
+    results = {"ok": 0, "skip": 0, "err": 0}
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(_dl_one, item): item for item in file_list[:200]}
+        for fut in as_completed(futures):
+            r = fut.result()
+            with counter_lock:
+                results[r] += 1
+            total = results["ok"] + results["skip"]
+            _set_status(status_path, "downloading", f"Downloading images from Drive… {total} photos")
+
+    downloaded = results["ok"] + results["skip"]
+    _set_status(status_path, "downloaded", f"Downloaded {downloaded} image(s) ({results['err']} errors)")
 
 def build_encodings(event_dir: Path, status_path: Path):
     import pickle, numpy as np
@@ -522,26 +539,41 @@ def build_encodings(event_dir: Path, status_path: Path):
             existing = {}
     if _load_insight():
         import cv2
-        new_entries = []
-        for img_path in imgs:
-            if img_path.name in existing:
-                new_entries.append(existing[img_path.name])
-                continue
+        from concurrent.futures import ThreadPoolExecutor as _TPE
+        import threading as _th
+
+        to_process = [p for p in imgs if p.name not in existing]
+        cached     = [existing[p.name] for p in imgs if p.name in existing]
+        _lock      = _th.Lock()
+        new_entries = list(cached)
+        done_count  = [len(cached)]
+
+        def _encode_one(img_path):
             try:
                 img = cv2.imread(str(img_path))
                 if img is None:
-                    continue
+                    return []
                 faces = _insight_app.get(img)
+                result = []
                 for face in faces:
                     emb = face.embedding.astype(np.float32)
                     emb = emb / np.linalg.norm(emb)
-                    new_entries.append({
-                        "path":      str(img_path),
-                        "filename":  img_path.name,
-                        "embedding": emb
-                    })
+                    result.append({"path": str(img_path), "filename": img_path.name, "embedding": emb})
+                return result
             except Exception:
-                pass
+                return []
+
+        with _TPE(max_workers=4) as pool:
+            futures = {pool.submit(_encode_one, p): p for p in to_process}
+            from concurrent.futures import as_completed as _ac
+            for fut in _ac(futures):
+                entries = fut.result()
+                with _lock:
+                    new_entries.extend(entries)
+                    done_count[0] += 1
+                    _set_status(status_path, "indexing",
+                                f"Indexing photos… {done_count[0]}/{len(imgs)}")
+
         with open(str(enc_path), "wb") as f:
             pickle.dump(new_entries, f)
     meta = _load_meta(event_dir / "meta.json")

@@ -719,6 +719,9 @@
         // Update badge in list
         const item = document.querySelector(`[data-id="${eventId}"] .badge`);
         if (item) { item.className = 'badge badge-green'; item.textContent = 'ready'; }
+        // Update photo count in event card meta
+        const meta = document.querySelector(`[data-id="${eventId}"] .event-meta`);
+        if (meta && d.photo_count) { meta.textContent = `${d.photo_count} photos • /event/${eventId}`; }
         toast(`✅ ${d.photo_count} photos indexed and ready!`, '#22c55e');
       } else if (d.overall === 'error') {
         spin.style.borderTopColor = '#ef4444';
