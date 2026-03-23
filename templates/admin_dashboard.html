@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard – Zayron Infotech PhotoFinder</title>
+  <title>Admin Dashboard – Zayron Infotech Zayro Lens</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -312,14 +312,46 @@
       font-size: .82rem;
     }
     .status-bar .spin {
-      width: 16px; height: 16px;
-      border: 2px solid rgba(59,130,246,.3);
+      width: 24px; height: 24px;
+      border: 3px solid rgba(245,158,11,.2);
       border-top-color: var(--blue);
+      border-right-color: #fbbf24;
       border-radius: 50%;
-      animation: spin .8s linear infinite;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .status-msg { flex: 1; color: #94a3b8; }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    @keyframes slideRight { 0% { width: 0%; } 100% { width: 65%; } }
+
+    /* Page Loader */
+    .page-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(7, 9, 26, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      backdrop-filter: blur(2px);
+    }
+    .page-loader.hidden {
+      display: none;
+    }
+    .loader-spinner {
+      width: 64px;
+      height: 64px;
+      border: 5px solid rgba(245, 158, 11, 0.2);
+      border-top: 5px solid #f59e0b;
+      border-right: 5px solid #fbbf24;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .status-msg { flex: 1; color: #fbbf24; font-weight: 600; font-size: 0.95rem; }
     .status-count { color: var(--blue); font-weight: 600; }
 
     /* Tabs */
@@ -388,24 +420,272 @@
     }
     .toast.show { transform: translateY(0); opacity: 1; }
 
+    /* ── Browse Photos Gallery ─────────────── */
+    .browse-toolbar {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 10px;
+      margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .browse-count {
+      font-size: .8rem; color: var(--muted);
+    }
+    .browse-count strong { color: #f59e0b; font-size: .95rem; }
+    .per-page-select {
+      background: rgba(15,23,42,.8);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: .8rem;
+      cursor: pointer;
+      outline: none;
+    }
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .photo-thumb-card {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      aspect-ratio: 4/3;
+      height: 280px;
+      cursor: pointer;
+      transition: border-color .2s, transform .15s;
+    }
+    .photo-thumb-card:hover { border-color: #f59e0b; transform: scale(1.03); }
+    .photo-thumb-card img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+      opacity: 0; transition: opacity .3s ease;
+    }
+    .photo-thumb-card img.loaded { opacity: 1; }
+    /* Remove button on each card */
+    .photo-remove-btn {
+      position: absolute; top: 5px; left: 5px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: rgba(239,68,68,.85);
+      border: none; color: #fff;
+      font-size: .75rem; font-weight: 800;
+      cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      z-index: 10; line-height: 1;
+      opacity: 0; transition: opacity .15s;
+      box-shadow: 0 1px 4px rgba(0,0,0,.5);
+    }
+    .photo-thumb-card:hover .photo-remove-btn { opacity: 1; }
+    .photo-thumb-name {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,.65);
+      font-size: .62rem; color: #cbd5e1;
+      padding: 3px 5px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* Skeleton loader */
+    .photo-skeleton {
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, #1e293b 25%, #293548 50%, #1e293b 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      transition: opacity .3s ease;
+    }
+    .photo-skeleton.hide { opacity: 0; pointer-events: none; }
+    .photo-skeleton-num {
+      font-size: 1.4rem; font-weight: 800;
+      color: rgba(245,158,11,.35);
+      font-family: 'Segoe UI', sans-serif;
+      user-select: none;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .pagination-bar {
+      display: flex; gap: 6px;
+      justify-content: center; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .page-btn {
+      min-width: 32px; height: 32px; padding: 0 8px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      font-size: .8rem; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .page-btn:hover { border-color: #f59e0b; color: #f59e0b; }
+    .page-btn.active {
+      background: rgba(245,158,11,.2);
+      border-color: #f59e0b;
+      color: #fbbf24;
+    }
+    .page-btn:disabled { opacity: .3; cursor: not-allowed; }
+    .browse-actions { display: flex; gap: 10px; margin-bottom: 6px; }
+    .browse-actions button {
+      flex: 1; padding: 10px; border-radius: 9px;
+      font-size: .85rem; font-weight: 700;
+      cursor: pointer; border: none; transition: opacity .2s;
+    }
+    .btn-find {
+      background: rgba(59,130,246,.2);
+      border: 1px solid rgba(59,130,246,.4) !important;
+      color: #93c5fd;
+    }
+    .btn-find:hover { background: rgba(59,130,246,.3); }
+    .btn-find-new {
+      background: rgba(245,158,11,.15);
+      border: 1px solid rgba(245,158,11,.35) !important;
+      color: #fcd34d;
+    }
+    .btn-find-new:hover { background: rgba(245,158,11,.25); }
+    .browse-submit-btn {
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #166534, #16a34a, #22c55e);
+      border: none; border-radius: 10px;
+      color: #fff; font-size: .92rem; font-weight: 700;
+      cursor: pointer; transition: opacity .2s, transform .1s;
+      margin-top: 4px;
+    }
+    .browse-submit-btn:hover { opacity: .88; }
+    .browse-submit-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Photo lightbox ─────────────────────── */
+    #photoLightbox {
+      display: none; position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,.9); backdrop-filter: blur(6px);
+      align-items: center; justify-content: center;
+    }
+    #photoLightbox.open { display: flex; }
+    #photoLightbox img {
+      max-width: 92vw; max-height: 90vh;
+      border-radius: 10px; box-shadow: 0 24px 80px rgba(0,0,0,.8);
+      object-fit: contain;
+      transition: opacity .25s;
+    }
+    #lbClose {
+      position: absolute; top: 18px; right: 22px;
+      font-size: 2rem; color: #fff; cursor: pointer;
+      opacity: .7; line-height: 1; user-select: none;
+    }
+    #lbClose:hover { opacity: 1; }
+    #lbName {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      color: #cbd5e1; font-size: .82rem;
+      background: rgba(0,0,0,.5); padding: 4px 14px; border-radius: 20px;
+      white-space: nowrap; max-width: 80vw; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* History Panel */
+    .history-event {
+      background: rgba(59,130,246,.08);
+      border: 1px solid rgba(59,130,246,.2);
+      border-radius: 10px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .history-event:hover { background: rgba(59,130,246,.15); border-color: rgba(59,130,246,.4); }
+    .history-event.active { border-color: #f59e0b; background: rgba(245,158,11,.1); }
+    .history-event-name { font-weight: 600; font-size: .9rem; margin-bottom: 4px; color: #f1f5f9; }
+    .history-event-meta { font-size: .75rem; color: var(--muted); margin-bottom: 6px; }
+    .history-event-count { font-size: .8rem; color: #f59e0b; font-weight: 600; }
+    .history-event-link { font-size: .7rem; color: #64b5f6; word-break: break-all; margin-top: 4px; }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+      max-height: 450px;
+      overflow-y: auto;
+      padding: 8px;
+      background: rgba(0,0,0,.2);
+      border-radius: 8px;
+    }
+    .photo-thumb {
+      aspect-ratio: 4/3;
+      height: 200px;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      background: #1a2640;
+      border: 1px solid rgba(245,158,11,.2);
+      transition: transform .2s, border-color .2s;
+    }
+    .photo-thumb:hover { transform: scale(1.05); border-color: #f59e0b; }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
     /* Responsive */
     @media (max-width: 900px) {
       .main { grid-template-columns: 1fr; }
       .left-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    /* Animations for right panel */
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px) scale(1);
+      }
+      50% {
+        transform: translateY(-15px) scale(1.05);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.9;
+      }
+      50% {
+        transform: scale(1.1);
+        opacity: 1;
+      }
     }
   </style>
 </head>
 <body>
 
 <!-- ─── Page Loader ─────────────────────────────── -->
-<div id="pgLoader"><div class="pg-spin"></div></div>
-<style>
-  #pgLoader{position:fixed;inset:0;z-index:99999;background:#000010;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .45s ease,visibility .45s ease;}
-  #pgLoader.done{opacity:0;visibility:hidden;pointer-events:none;}
-  .pg-spin{width:56px;height:56px;border-radius:50%;border:4px solid rgba(255,255,255,0.07);border-top:4px solid #3b82f6;border-right:4px solid #f59e0b;animation:pgSpin .75s linear infinite;}
-  @keyframes pgSpin{to{transform:rotate(360deg);}}
-</style>
-<script>(function(){var L=document.getElementById('pgLoader');function h(){L.classList.add('done');}window.addEventListener('load',h);window.addEventListener('pageshow',function(e){if(e.persisted)h();});setTimeout(h,6000);})();</script>
+<div id="pageLoader" class="page-loader">
+  <div class="loader-spinner"></div>
+</div>
+
+<script>
+  (function() {
+    const loader = document.getElementById('pageLoader');
+
+    function hideLoader() {
+      if (loader) {
+        loader.classList.add('hidden');
+      }
+    }
+
+    // Hide loader when page fully loads
+    if (document.readyState === 'complete') {
+      hideLoader();
+    } else {
+      window.addEventListener('load', hideLoader);
+      // Timeout fallback (6 seconds max)
+      setTimeout(hideLoader, 6000);
+    }
+
+    // Handle page show (browser back button)
+    window.addEventListener('pageshow', function(e) {
+      if (e.persisted) {
+        hideLoader();
+      }
+    });
+  })();
+</script>
 
 
 <!-- Header -->
@@ -416,14 +696,15 @@
     </div>
     <div class="brand-text">
       <h1>Zayron Infotech <em>Pvt. Ltd.</em></h1>
-      <span>PhotoFinder &mdash; Admin Dashboard</span>
+      <span>Zayro Lens &mdash; Admin Dashboard</span>
     </div>
   </div>
   <div class="header-right">
+    <a href="/admin/dashboard" style="padding:8px 16px; background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.3); color:#60a5fa; border-radius:8px; font-size:.82rem; font-weight:600; text-decoration:none; transition: all .2s; cursor:pointer;" onmouseover="this.style.background='rgba(59,130,246,.2)'" onmouseout="this.style.background='rgba(59,130,246,.1)'">🏠 Home</a>
     {% if is_superadmin %}
-    <a href="/superadmin/dashboard" style="padding:6px 14px; background:rgba(59,130,246,.15); border:1px solid rgba(59,130,246,.3); color:#60a5fa; border-radius:8px; font-size:.78rem; font-weight:600; text-decoration:none;">⚡ Superadmin Panel</a>
+    <a href="/superadmin/dashboard" style="padding:8px 16px; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3); color:#f59e0b; border-radius:8px; font-size:.82rem; font-weight:600; text-decoration:none; transition: all .2s; cursor:pointer;" onmouseover="this.style.background='rgba(245,158,11,.2)'" onmouseout="this.style.background='rgba(245,158,11,.1)'">⚡ Superadmin</a>
     {% endif %}
-    <a href="/admin/logout" class="logout-btn">Sign Out</a>
+    <a href="/admin/logout" class="logout-btn">🚪 Sign Out</a>
   </div>
 </header>
 
@@ -462,43 +743,191 @@
   <div class="left-panel">
 
     <!-- Create new event form -->
-    <p class="section-title">Create New Event</p>
-    <div class="form-card">
-      <h2>📁 New Event</h2>
+    <div class="form-card" style="border: none; background: transparent; padding: 0; margin-bottom: 0;">
+      <h2 style="display: none;">✨ Create Event</h2>
 
-      <!-- Tab switcher -->
-      <div class="tab-row">
-        <button class="tab-btn active" id="tabDrive" onclick="switchTab('drive')">
-          ☁ Google Drive
+      <!-- Tab switcher (hidden - simplified single-page design) -->
+      <div class="tab-row" style="display:none;">
+        <button class="tab-btn active" id="tabMain" onclick="switchTab('main')">
+          📊 Overview
+        </button>
+        <button class="tab-btn" id="tabDrive" onclick="switchTab('drive')">
+          📋 Dashboard
+        </button>
+        <button class="tab-btn" id="tabBrowse" onclick="switchTab('browse')">
+          🖼 Browse Photos
         </button>
       </div>
 
-      <div class="form-row" style="margin-top:16px;">
-        <label>Event Name</label>
-        <input type="text" id="eventName" placeholder="e.g. Annual Day 2024" maxlength="80">
-      </div>
-
-      <!-- Drive tab -->
-      <div id="driveTab">
-        <div class="form-row">
-          <label>Google Drive Folder Link</label>
-          <input type="text" id="driveLink"
-                 placeholder="https://drive.google.com/drive/folders/…">
+      <!-- Main Dashboard / Overview tab -->
+      <div id="mainTab">
+        <!-- Dashboard Header with View All Events Button -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px;">
+          <div>
+            <h2 style="font-size: 1.8rem; font-weight: 800; margin: 0; margin-bottom: 4px;">Dashboard</h2>
+            <p style="color: var(--muted); font-size: .95rem; margin: 0;">AI-powered face recognition. Organize events, find photos instantly.</p>
+          </div>
+          <button onclick="toggleEventsDashboard()" style="background: rgba(59,130,246,.15); border: 1px solid rgba(59,130,246,.3); color: #60a5fa; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: .9rem; font-weight: 600; white-space: nowrap; transition: all .2s;">
+            📋 View All Events
+          </button>
         </div>
-        <div style="display:flex;align-items:flex-start;gap:10px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25);border-left:3px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-bottom:14px;">
-          <span style="font-size:1rem;margin-top:1px;">📋</span>
-          <div style="font-size:.76rem;color:#94a3b8;line-height:1.6;">
-            <strong style="color:#f59e0b;display:block;margin-bottom:3px;">How to share your Google Drive folder:</strong>
-            1. Open your Google Drive folder<br>
-            2. Click <strong style="color:#fbbf24;">Share</strong> → <strong style="color:#fbbf24;">General access</strong><br>
-            3. Change <strong style="color:#fbbf24;">"Restricted"</strong> → <strong style="color:#fbbf24;">"Anyone with the link"</strong><br>
-            4. Set role to <strong style="color:#fbbf24;">Viewer</strong> → Click <strong style="color:#fbbf24;">Done</strong>
+
+        <!-- Events Dashboard Panel -->
+        <div id="eventsDashboardPanel" style="display:none; border: 2px solid rgba(59,130,246,.3); border-radius: 12px; padding: 20px; margin-bottom: 24px; background: rgba(59,130,246,.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: #ffffff;">📋 All Events</h3>
+            <button onclick="toggleEventsDashboard()" style="background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 1.4rem; opacity: 0.8; hover: opacity 1;">✕</button>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <input type="text" id="dashboardSearch" placeholder="Search events..."
+              style="width: 100%; padding: 10px 12px; font-size: .9rem; border-radius: 6px; border: 1.5px solid rgba(59,130,246,.3); background: rgba(59,130,246,.08); color: #f1f5f9;">
+          </div>
+          <div id="dashboardEventsList" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+            <div style="color: var(--muted); font-size: .85rem; text-align: center; padding: 20px 12px;">
+              Loading events...
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats Overview (3 columns) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 28px;">
+          <div style="border: 2px solid rgba(34,197,94,.4); border-radius: 10px; padding: 18px; text-align: center; background: rgba(34,197,94,.05);">
+            <div style="font-size: 2.2rem; font-weight: 800; color: #22c55e; margin-bottom: 6px;" id="statsEvents">0</div>
+            <div style="font-size: .9rem; color: #cbd5e1;">Total Events</div>
+          </div>
+          <div style="border: 2px solid rgba(59,130,246,.4); border-radius: 10px; padding: 18px; text-align: center; background: rgba(59,130,246,.05);">
+            <div style="font-size: 2.2rem; font-weight: 800; color: #3b82f6; margin-bottom: 6px;" id="statsPhotos">0</div>
+            <div style="font-size: .9rem; color: #cbd5e1;">Total Photos</div>
+          </div>
+          <div style="border: 2px solid rgba(245,158,11,.4); border-radius: 10px; padding: 18px; text-align: center; background: rgba(245,158,11,.05);">
+            <div style="font-size: 2.2rem; font-weight: 800; color: #f59e0b; margin-bottom: 6px;">⚡</div>
+            <div style="font-size: .9rem; color: #cbd5e1;">AI Ready</div>
+          </div>
+        </div>
+
+        <!-- Feature Cards -->
+        <div style="margin-bottom: 28px;">
+          <p class="section-title" style="font-size: 1.1rem; font-weight: 700; margin-bottom: 14px;">✨ Features</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div style="border: 2px solid rgba(59,130,246,.6); border-radius: 8px; padding: 16px; background: rgba(59,130,246,.12);">
+              <div style="font-size: 1.3rem; margin-bottom: 6px;">🤖</div>
+              <div style="font-weight: 700; margin-bottom: 4px; color: #60a5fa;">Face Recognition</div>
+              <div style="font-size: .85rem; color: #cbd5e1;">AI-powered photo matching</div>
+            </div>
+            <div style="border: 2px solid rgba(168,85,247,.6); border-radius: 8px; padding: 16px; background: rgba(168,85,247,.12);">
+              <div style="font-size: 1.3rem; margin-bottom: 6px;">🎁</div>
+              <div style="font-weight: 700; margin-bottom: 4px; color: #d8b4fe;">Event Management</div>
+              <div style="font-size: .85rem; color: #cbd5e1;">Organize by event & date</div>
+            </div>
+            <div style="border: 2px solid rgba(34,197,94,.6); border-radius: 8px; padding: 16px; background: rgba(34,197,94,.12);">
+              <div style="font-size: 1.3rem; margin-bottom: 6px;">📊</div>
+              <div style="font-weight: 700; margin-bottom: 4px; color: #86efac;">QR Sharing</div>
+              <div style="font-size: .85rem; color: #cbd5e1;">Generate & share QR codes</div>
+            </div>
+            <div style="border: 2px solid rgba(245,158,11,.6); border-radius: 8px; padding: 16px; background: rgba(245,158,11,.12);">
+              <div style="font-size: 1.3rem; margin-bottom: 6px;">⬇️</div>
+              <div style="font-weight: 700; margin-bottom: 4px; color: #fcd34d;">Quick Download</div>
+              <div style="font-size: .85rem; color: #cbd5e1;">ZIP export & email sharing</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Events Section -->
+        <div>
+          <p class="section-title" style="font-size: 1.1rem; font-weight: 700; margin-bottom: 14px;">📅 Recent Events</p>
+          <div id="mainRecentEvents" style="display: flex; flex-direction: column; gap: 12px; max-height: 500px; overflow-y: auto;">
+            <div style="color: var(--muted); font-size: .85rem; text-align: center; padding: 32px 12px;">
+              📭 No events yet. Click "Create Event" to get started!
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Upload tab -->
-      <div id="filesTab" style="display:none;">
+      <!-- Drive tab (Events Dashboard) - Hidden for simplified single-page -->
+      <div id="driveTab" style="display:none !important;">
+        <!-- History Panel in Dashboard Tab -->
+        <div style="margin-bottom: 24px;">
+          <p class="section-title" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+            Events
+            <input type="text" id="historySearch" placeholder="Search..."
+              style="width: 100px; padding: 4px 8px; font-size: .7rem; border-radius: 6px; border: 1px solid rgba(245,158,11,.2); background: rgba(245,158,11,.05); color: #f1f5f9;"
+              onkeyup="searchHistoryEvents()">
+          </p>
+          <div id="historyPanel" style="max-height: 600px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+            <div style="color: var(--muted); font-size: .85rem; text-align: center; padding: 20px 12px;">
+              Loading QR codes...
+            </div>
+          </div>
+        </div>
+
+        <!-- Hidden form fields for JS access (submitBrowseEvent needs these) -->
+        <div style="display:none;">
+          <input type="text" id="eventName" placeholder="Event Name">
+          <input type="date" id="eventFromDate">
+          <input type="date" id="eventToDate">
+          <input type="text" id="driveLink" placeholder="Google Drive Link">
+        </div>
+      </div>
+
+      <!-- Browse Photos tab - Hidden for simplified single-page -->
+      <div id="browseTab" style="display:none !important; margin-top:16px;">
+        <div class="form-row">
+          <label>Event Name</label>
+          <input type="text" id="browseEventName" placeholder="e.g. Annual Day 2024" maxlength="80">
+        </div>
+
+        <!-- Date Range Fields -->
+        <div class="form-row" style="display:flex; gap:14px;">
+          <div style="flex:1;">
+            <label>From Date</label>
+            <input type="date" id="browseFromDate" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-size:.9rem; background:#1e3a8a; color:#fff;">
+          </div>
+          <div style="flex:1;">
+            <label>To Date</label>
+            <input type="date" id="browseToDate" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-size:.9rem; background:#1e3a8a; color:#fff;">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label>Google Drive Folder Link</label>
+          <input type="text" id="browseDriveLink"
+                 placeholder="https://drive.google.com/drive/folders/…">
+        </div>
+        <div class="browse-actions">
+          <button class="btn-find" id="btnFindPhotos" onclick="fetchBrowsePhotos(false)">
+            🔍 Find Photos
+          </button>
+          <button class="btn-find-new" id="btnFindNew" onclick="fetchBrowsePhotos(true)">
+            🔄 Find New Photos
+          </button>
+        </div>
+
+        <!-- Gallery (hidden until fetch) -->
+        <div id="browseGallery" style="display:none; margin-top:14px;">
+          <div class="browse-toolbar">
+            <div class="browse-count">
+              Found <strong id="browseCountNum">0</strong> photos
+            </div>
+            <select class="per-page-select" id="perPageSel" onchange="renderPage(1)">
+              <option value="10">10 per page</option>
+              <option value="20">20 per page</option>
+              <option value="30">30 per page</option>
+              <option value="0">All photos</option>
+            </select>
+          </div>
+
+          <div class="photo-grid" id="photoGrid"></div>
+          <div class="pagination-bar" id="paginationBar"></div>
+
+          <button class="browse-submit-btn" id="browseSubmitBtn"
+                  onclick="submitBrowseEvent()">
+            ✅ Submit &amp; Create Event
+          </button>
+        </div>
+      </div>
+
+      <!-- Upload tab - Hidden for simplified single-page -->
+      <div id="filesTab" style="display:none !important;">
         <div class="form-row">
           <label>Select Photos (multiple)</label>
           <div class="file-drop" id="fileDrop" onclick="document.getElementById('photoFiles').click()">
@@ -511,14 +940,14 @@
         </div>
       </div>
 
-      <button class="submit-btn" id="submitBtn" onclick="submitEvent()">
-        Generate QR Code →
+      <!-- Bottom button hidden - integrated into Overview -->
+      <button class="submit-btn" id="submitBtn" onclick="switchTab('browse')" style="display:none !important;">
+        ➕ Create New Event
       </button>
     </div>
 
-    <!-- Events list -->
-    <p class="section-title">Previous Events</p>
-    <div class="events-list" id="eventsList">
+    <!-- Events list (hidden, kept for JS selectEvent / addEventToList compatibility) -->
+    <div class="events-list" id="eventsList" style="display:none;">
       {% if events %}
         {% for ev in events %}
         <div class="event-item" data-id="{{ ev.id }}" onclick="selectEvent('{{ ev.id }}','{{ ev.name }}','{{ ev.status }}')">
@@ -532,11 +961,6 @@
           </span>
         </div>
         {% endfor %}
-      {% else %}
-        <div class="empty-state">
-          <div class="ei">📂</div>
-          <p>No events yet.<br>Create one above.</p>
-        </div>
       {% endif %}
     </div>
 
@@ -545,10 +969,58 @@
   <!-- ── RIGHT PANEL ────────────────────────────── -->
   <div class="right-panel">
 
-    <p class="section-title">QR Code</p>
+    <!-- Animated Dashboard Illustration -->
+    <div id="animatedDashboard" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 30px 20px; min-height: 400px;">
+
+      <!-- Animated Floating Icons -->
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; margin-bottom: 15px;">
+        <!-- Top icon - Gift -->
+        <div style="font-size: 3.2rem; animation: float 3s ease-in-out infinite; will-change: transform;">🎁</div>
+
+        <!-- Middle row with 3 icons -->
+        <div style="display: flex; align-items: center; justify-content: center; gap: 30px; position: relative;">
+          <!-- Left - Robot -->
+          <div style="font-size: 2.8rem; animation: float 3.5s ease-in-out infinite 0.2s; will-change: transform;">🤖</div>
+
+          <!-- Center - Gear -->
+          <div style="font-size: 3.5rem; animation: pulse 2s ease-in-out infinite; will-change: transform; opacity: 0.9;">⚙️</div>
+
+          <!-- Right - Camera -->
+          <div style="font-size: 2.8rem; animation: float 3s ease-in-out infinite 0.4s; will-change: transform;">📸</div>
+        </div>
+      </div>
+
+      <!-- Animated Text with Gradient -->
+      <div style="text-align: center;">
+        <div style="font-size: 1.4rem; font-weight: 800; margin-bottom: 10px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          Zayro Lens
+        </div>
+        <div style="font-size: .95rem; color: var(--muted); line-height: 1.7;">
+          Face recognition powered<br/>photo organization system
+        </div>
+      </div>
+
+      <!-- Status Card with Gradient Border -->
+      <div style="width: 100%; max-width: 220px; background: linear-gradient(135deg, rgba(59,130,246,.08), rgba(168,85,247,.08)); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;">
+          <span style="display: inline-block; width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite;"></span>
+          <span style="font-size: .85rem; color: #22c55e; font-weight: 600;">System Active</span>
+        </div>
+        <div style="font-size: .75rem; color: var(--muted);">Ready to create events</div>
+      </div>
+
+      <!-- Feature Pills -->
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%;">
+        <span style="font-size: .75rem; background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.2); color: #60a5fa; padding: 6px 12px; border-radius: 20px;">⚡ AI Enabled</span>
+        <span style="font-size: .75rem; background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.2); color: #4ade80; padding: 6px 12px; border-radius: 20px;">✓ Ready</span>
+      </div>
+
+    </div>
+
+    <p class="section-title" id="qrTitle" style="display:none;">QR Code</p>
 
     <!-- QR placeholder / display -->
-    <div class="qr-placeholder" id="qrArea">
+    <div class="qr-placeholder" id="qrArea" style="display:none;">
       <div class="ph-icon">🔲</div>
       <p>Create an event on the left to generate a QR code here.</p>
     </div>
@@ -583,6 +1055,13 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Photo Lightbox -->
+<div id="photoLightbox" onclick="closeLightbox(event)">
+  <span id="lbClose" onclick="closeLightbox()">✕</span>
+  <img id="lbImg" src="" alt="">
+  <div id="lbName"></div>
+</div>
+
 <script>
   let currentEventId  = null;
   let currentUserUrl  = null;
@@ -596,15 +1075,245 @@
     setTimeout(() => el.classList.remove('show'), 3000);
   }
 
-  let currentTab = 'drive';
+  // ── Load and display history ────────────────────────────────────────
+  async function loadHistory() {
+    try {
+      const resp = await fetch('/admin/events-history');
+      const data = await resp.json();
+      const panel = document.getElementById('historyPanel');
+
+      if (!data.events || data.events.length === 0) {
+        panel.innerHTML = '<div style="color: var(--muted); font-size: .85rem; text-align: center; padding: 20px 12px;">No events yet</div>';
+        return;
+      }
+
+      panel.innerHTML = data.events.map(evt => `
+        <div class="history-event">
+          <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px; margin-bottom: 8px;">
+            <div style="flex: 1;">
+              <div class="history-event-name">${evt.name}</div>
+              <div class="history-event-meta">
+                ${evt.photo_count} photo${evt.photo_count !== 1 ? 's' : ''} • ${evt.current_status}
+              </div>
+            </div>
+            <div style="display: flex; gap: 4px; flex-shrink: 0;">
+              <button onclick="event.stopPropagation(); selectEvent('${evt.id}', '${evt.name}', '${evt.current_status}')" title="View Details"
+                style="width:24px;height:24px;padding:0;background:#1e3a8a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center;">
+                👁
+              </button>
+              <button onclick="event.stopPropagation(); deleteEvent('${evt.id}', '${evt.name}')" title="Delete"
+                style="width:24px;height:24px;padding:0;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center;">
+                🗑
+              </button>
+            </div>
+          </div>
+          <button onclick="event.stopPropagation(); selectEvent('${evt.id}', '${evt.name}', '${evt.current_status}'); setTimeout(() => reindexEvent(), 300);" style="width:100%;padding:6px 10px;background:#f59e0b;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:.8rem;">
+            🔄 Reindex
+          </button>
+        </div>
+      `).join('');
+      updateMainDashboard(); // Also update main dashboard stats
+    } catch (e) {
+      document.getElementById('historyPanel').innerHTML =
+        '<div style="color: #ef4444; font-size: .85rem; text-align: center; padding: 20px 12px;">Error loading history</div>';
+    }
+  }
+
+  // ── Search history events ──────────────────────────────────────────
+  async function searchHistoryEvents() {
+    const query = document.getElementById('historySearch').value;
+    try {
+      const resp = await fetch(`/admin/events-history/search?q=${encodeURIComponent(query)}`);
+      const data = await resp.json();
+      const panel = document.getElementById('historyPanel');
+
+      if (!data.events || data.events.length === 0) {
+        panel.innerHTML = '<div style="color: var(--muted); font-size: .85rem; text-align: center; padding: 20px 12px;">No events found</div>';
+        return;
+      }
+
+      panel.innerHTML = data.events.map(evt => `
+        <div class="history-event">
+          <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px; margin-bottom: 8px;">
+            <div style="flex: 1;">
+              <div class="history-event-name">${evt.name}</div>
+              <div class="history-event-meta">
+                ${evt.photo_count} photo${evt.photo_count !== 1 ? 's' : ''} • ${evt.current_status}
+              </div>
+            </div>
+            <div style="display: flex; gap: 4px; flex-shrink: 0;">
+              <button onclick="event.stopPropagation(); selectEvent('${evt.id}', '${evt.name}', '${evt.current_status}')" title="View Details"
+                style="width:24px;height:24px;padding:0;background:#1e3a8a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center;">
+                👁
+              </button>
+              <button onclick="event.stopPropagation(); deleteEvent('${evt.id}', '${evt.name}')" title="Delete"
+                style="width:24px;height:24px;padding:0;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center;">
+                🗑
+              </button>
+            </div>
+          </div>
+          <button onclick="event.stopPropagation(); selectEvent('${evt.id}', '${evt.name}', '${evt.current_status}'); setTimeout(() => reindexEvent(), 300);" style="width:100%;padding:6px 10px;background:#f59e0b;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:.8rem;">
+            🔄 Reindex
+          </button>
+        </div>
+      `).join('');
+    } catch (e) {
+      console.error('Search error:', e);
+    }
+  }
+
+  // ── Update Main Dashboard (Overview) stats and recent events ─────────
+  async function updateMainDashboard() {
+    try {
+      const resp = await fetch('/admin/events-history');
+      const data = await resp.json();
+
+      // Calculate stats
+      let totalPhotos = 0;
+      let recentEvents = [];
+
+      if (data.events && data.events.length > 0) {
+        totalPhotos = data.events.reduce((sum, evt) => sum + evt.photo_count, 0);
+        recentEvents = data.events.slice(0, 5); // Get last 5 events
+      }
+
+      // Update stats display
+      document.getElementById('statsEvents').textContent = data.events ? data.events.length : 0;
+      document.getElementById('statsPhotos').textContent = totalPhotos;
+
+      // Update recent events
+      const recentContainer = document.getElementById('mainRecentEvents');
+      if (recentEvents.length === 0) {
+        recentContainer.innerHTML = '<div style="color: var(--muted); font-size: .85rem; text-align: center; padding: 20px 12px;">No events yet. Create your first event!</div>';
+      } else {
+        recentContainer.innerHTML = recentEvents.map(evt => `
+          <div style="background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2); border-radius: 8px; padding: 12px; cursor: pointer; transition: all .2s;" onclick="switchTab('drive'); selectEvent('${evt.id}', '${evt.name}', '${evt.current_status}')">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div style="font-weight: 600; font-size: .95rem;">${evt.name}</div>
+              <span style="background: ${evt.current_status === 'ready' ? 'rgba(34,197,94,.2)' : evt.current_status === 'error' ? 'rgba(239,68,68,.2)' : 'rgba(245,158,11,.2)'}; color: ${evt.current_status === 'ready' ? '#22c55e' : evt.current_status === 'error' ? '#ef4444' : '#f59e0b'}; padding: 2px 8px; border-radius: 4px; font-size: .75rem; font-weight: 600;">${evt.current_status}</span>
+            </div>
+            <div style="font-size: .85rem; color: var(--muted);">${evt.photo_count} photo${evt.photo_count !== 1 ? 's' : ''}</div>
+          </div>
+        `).join('');
+      }
+    } catch (e) {
+      console.error('Error updating main dashboard:', e);
+    }
+  }
+
+  // ── Toggle Events Dashboard Panel ────────────────────────────────────
+  async function toggleEventsDashboard() {
+    const panel = document.getElementById('eventsDashboardPanel');
+    const isHidden = panel.style.display === 'none';
+
+    if (isHidden) {
+      // Show panel and load all events
+      panel.style.display = 'block';
+      try {
+        const resp = await fetch('/admin/events-history');
+        const data = await resp.json();
+        const eventsList = document.getElementById('dashboardEventsList');
+
+        if (!data.events || data.events.length === 0) {
+          eventsList.innerHTML = '<div style="color: var(--muted); font-size: .85rem; text-align: center; padding: 20px 12px;">No events yet</div>';
+          return;
+        }
+
+        eventsList.innerHTML = data.events.map(evt => `
+          <div style="background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2); border-radius: 8px; padding: 12px; transition: all .2s;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="font-weight: 600; font-size: .95rem; cursor: pointer; color: #3b82f6;" onclick="document.getElementById('eventsDashboardPanel').style.display='none';">${evt.name}</div>
+              <span style="background: ${evt.current_status === 'ready' ? 'rgba(34,197,94,.2)' : evt.current_status === 'error' ? 'rgba(239,68,68,.2)' : 'rgba(245,158,11,.2)'}; color: ${evt.current_status === 'ready' ? '#22c55e' : evt.current_status === 'error' ? '#ef4444' : '#f59e0b'}; padding: 2px 8px; border-radius: 4px; font-size: .75rem; font-weight: 600;">${evt.current_status}</span>
+            </div>
+            <div style="font-size: .85rem; color: var(--muted); margin-bottom: 8px;">${evt.photo_count} photo${evt.photo_count !== 1 ? 's' : ''}</div>
+            <div style="display: flex; gap: 6px;">
+              <button onclick="document.getElementById('eventsDashboardPanel').style.display='none'; selectEvent('${evt.id}', '${evt.name}', '${evt.current_status}'); setTimeout(() => reindexEvent(), 300);" style="flex: 1; padding: 6px 10px; background: #f59e0b; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: .8rem;">🔄 Reindex</button>
+              <button onclick="deleteEvent('${evt.id}', '${evt.name}')" style="padding: 6px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: .8rem;">🗑</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Error loading events:', e);
+      }
+    } else {
+      // Hide panel
+      panel.style.display = 'none';
+    }
+  }
+
+  // ── Delete event ────────────────────────────────────────────────────
+  async function deleteEvent(eventId, eventName) {
+    if (!confirm(`Delete "${eventName}" and all its photos? This cannot be undone.`)) return;
+
+    try {
+      const resp = await fetch(`/admin/event/${eventId}/delete`, { method: 'POST' });
+      const data = await resp.json();
+      if (resp.ok) {
+        toast(`✅ Event deleted`, '#22c55e');
+        loadHistory();
+      } else {
+        toast(`❌ Delete failed: ${data.error}`, '#ef4444');
+      }
+    } catch (e) {
+      toast(`❌ Error: ${e}`, '#ef4444');
+    }
+  }
+
+  // ── Export event as ZIP ─────────────────────────────────────────────
+  async function exportEvent(eventId, eventName) {
+    toast('📥 Downloading...', '#f59e0b');
+    try {
+      window.location.href = `/admin/event/${eventId}/export-zip`;
+      setTimeout(() => toast(`✅ Downloaded: ${eventName}_photos.zip`, '#22c55e'), 1000);
+    } catch (e) {
+      toast(`❌ Export failed: ${e}`, '#ef4444');
+    }
+  }
+
+  // ── View event photos ──────────────────────────────────────────────
+  async function viewEventPhotos(eventId) {
+    try {
+      const resp = await fetch(`/admin/event/${eventId}/photos`);
+      const data = await resp.json();
+
+      const photoDiv = document.getElementById(`photos-${eventId}`);
+      if (data.photos && data.photos.length > 0) {
+        const wasShown = photoDiv.style.display !== 'none';
+        if (wasShown) {
+          photoDiv.style.display = 'none';
+          return;
+        }
+
+        photoDiv.innerHTML = `
+          <div class="photo-grid">
+            ${data.photos.map(p => `
+              <div class="photo-thumb" onclick="event.stopPropagation()" title="${p.filename}">
+                <img src="/admin/event/${eventId}/photo/${p.idx}" alt="${p.filename}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect fill=%22%231a2640%22 width=%22100%22 height=%22100%22/%3E%3C/svg%3E'">
+              </div>
+            `).join('')}
+          </div>
+        `;
+        photoDiv.style.display = 'block';
+      }
+    } catch (e) {
+      console.error('Error loading photos:', e);
+    }
+  }
+
+  let currentTab = 'main';
   let selectedFiles = [];
 
   function switchTab(tab) {
     currentTab = tab;
-    document.getElementById('driveTab').style.display  = tab === 'drive' ? '' : 'none';
-    document.getElementById('filesTab').style.display  = tab === 'files' ? '' : 'none';
-    document.getElementById('tabDrive').classList.toggle('active', tab === 'drive');
-    document.getElementById('tabFiles').classList.toggle('active', tab === 'files');
+    document.getElementById('mainTab').style.display  = tab === 'main'   ? '' : 'none';
+    document.getElementById('driveTab').style.display  = tab === 'drive'  ? '' : 'none';
+    document.getElementById('filesTab').style.display  = tab === 'files'  ? '' : 'none';
+    document.getElementById('browseTab').style.display = tab === 'browse' ? '' : 'none';
+    document.getElementById('tabMain').classList.toggle('active',  tab === 'main');
+    document.getElementById('tabDrive').classList.toggle('active',  tab === 'drive');
+    document.getElementById('tabBrowse').classList.toggle('active', tab === 'browse');
+    // submitBtn — hide in browse tab (it has its own submit button)
+    document.getElementById('submitBtn').style.display = tab === 'browse' ? 'none' : '';
   }
 
   function handlePhotoSelect(files) {
@@ -613,8 +1322,11 @@
       selectedFiles.length + ' photo(s) selected';
   }
 
-  // Drag-drop onto file zone
+  // Drag-drop onto file zone & load history on init
   document.addEventListener('DOMContentLoaded', () => {
+    switchTab('main'); // Initialize with Main Dashboard (Overview) tab
+    loadHistory(); // Load history on page load
+    updateMainDashboard(); // Update main dashboard stats
     const drop = document.getElementById('fileDrop');
     if (!drop) return;
     drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor='rgba(59,130,246,.6)'; });
@@ -639,6 +1351,12 @@
     const fd = new FormData();
     fd.append('event_name', name);
     fd.append('upload_mode', currentTab);
+
+    // Add date range fields
+    const fromDate = document.getElementById('eventFromDate').value.trim();
+    const toDate = document.getElementById('eventToDate').value.trim();
+    if (fromDate) fd.append('from_date', fromDate);
+    if (toDate) fd.append('to_date', toDate);
 
     if (currentTab === 'drive') {
       const link = document.getElementById('driveLink').value.trim();
@@ -678,13 +1396,21 @@
 
     document.getElementById('eventName').value = '';
     document.getElementById('driveLink').value = '';
+    document.getElementById('eventFromDate').value = '';
+    document.getElementById('eventToDate').value = '';
     selectedFiles = [];
     document.getElementById('fileCountLabel').textContent = 'JPG / PNG / WEBP — no limit';
     toast('✅ QR generated! Processing photos in background…', '#22c55e');
+    setTimeout(loadHistory, 1000); // Refresh history after 1s
   }
 
   function showQR(eventId, name, userUrl) {
     const area = document.getElementById('qrArea');
+    const title = document.getElementById('qrTitle');
+    const animated = document.getElementById('animatedDashboard');
+    area.style.display = 'flex';
+    title.style.display = 'block';
+    animated.style.display = 'none';
     area.classList.add('has-qr');
     area.innerHTML = `
       <div class="qr-frame">
@@ -802,6 +1528,7 @@
       .then(d => {
         if (d.ok) {
           startStatusPoll(currentEventId, true);   // pass reindex=true
+          setTimeout(loadHistory, 2000); // Refresh history after reindex
         } else {
           setReindexLoading(false);
           toast('❌ ' + (d.error || 'Re-index failed'), '#ef4444');
@@ -833,7 +1560,7 @@
       <h2>${name}</h2>
       <p>${url}</p>
       <img src="/qr/${currentEventId}" alt="QR Code">
-      <small>Scan to find your photos • Powered by Zayron Infotech PhotoFinder</small>
+      <small>Scan to find your photos • Powered by Zayron Infotech Zayro Lens</small>
       <br><br>
       <button onclick="window.print()" style="padding:10px 24px;background:#f59e0b;
         border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.9rem;">
@@ -841,6 +1568,215 @@
       </button>
       </body></html>`);
     win.document.close();
+  }
+
+  /* ─────────────────────────────────────────────────────
+     Browse Photos Tab
+  ───────────────────────────────────────────────────── */
+  let _browseFiles  = [];   // full file list from Drive
+  let _browsePage   = 1;
+  let _browseFolderId = null;
+
+  let autoRefreshInterval = null;
+  async function fetchBrowsePhotos(forceRefresh) {
+    const link = document.getElementById('browseDriveLink').value.trim();
+    if (!link) { toast('⚠ Paste a Google Drive folder link first.', '#f59e0b'); return; }
+
+    const btn = forceRefresh
+      ? document.getElementById('btnFindNew')
+      : document.getElementById('btnFindPhotos');
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = forceRefresh ? '🔄 Refreshing…' : '🔍 Loading…';
+
+    try {
+      const res  = await fetch('/admin/browse-drive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ drive_link: link, force: forceRefresh })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast('❌ ' + (data.error || 'Failed to load photos'), '#ef4444'); return; }
+
+      _browseFiles    = data.files || [];
+      _browseFolderId = data.folder_id;
+      _browsePage     = 1;
+
+      document.getElementById('browseCountNum').textContent = _browseFiles.length;
+      document.getElementById('browseGallery').style.display = _browseFiles.length ? '' : 'none';
+
+      if (_browseFiles.length === 0) {
+        toast('⚠ No images found in that folder.', '#f59e0b');
+      } else {
+        renderPage(1);
+        toast(`✅ Found ${_browseFiles.length} photos!`, '#22c55e');
+      }
+
+      // Auto-refresh every 10 minutes (only if photos were found)
+      if (_browseFiles.length > 0 && !autoRefreshInterval) {
+        autoRefreshInterval = setInterval(() => {
+          console.log('🔄 Auto-refreshing photos from Drive...');
+          fetchBrowsePhotos(true);  // Silent refresh
+        }, 600000);  // 10 minutes
+      }
+    } catch(e) {
+      toast('❌ Network error', '#ef4444');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
+  }
+
+  function renderPage(page) {
+    _browsePage = page;
+    const perPage = parseInt(document.getElementById('perPageSel').value);
+    const total   = _browseFiles.length;
+
+    let slice;
+    if (perPage === 0) {
+      slice = _browseFiles;   // all
+    } else {
+      const start = (page - 1) * perPage;
+      slice = _browseFiles.slice(start, start + perPage);
+    }
+
+    // Render photo grid with numbered skeletons
+    const grid = document.getElementById('photoGrid');
+    const globalStart = perPage === 0 ? 0 : (page - 1) * perPage;
+    grid.innerHTML = slice.map((f, i) => {
+      const num = globalStart + i + 1;
+      return `<div class="photo-thumb-card" id="ptc-${f.id}"
+                   onclick="openLightbox('${f.id}','${escHtml(f.name)}','${f.full||''}')">
+        <button class="photo-remove-btn" title="Remove"
+                onclick="event.stopPropagation(); removePhoto('${f.id}')">✕</button>
+        <div class="photo-skeleton" id="sk-${f.id}">
+          <span class="photo-skeleton-num">${num}</span>
+        </div>
+        <img src="" data-id="${f.id}"
+             data-thumb="${f.thumb}"
+             data-full="${f.full||''}"
+             alt="${escHtml(f.name)}">
+        <div class="photo-thumb-name">${escHtml(f.name)}</div>
+      </div>`;
+    }).join('');
+
+    // Load images progressively with fallback URLs
+    slice.forEach(f => {
+      const img = grid.querySelector(`img[data-id="${f.id}"]`);
+      const sk  = document.getElementById(`sk-${f.id}`);
+      if (!img) return;
+      const urls = [
+        f.thumb,
+        `https://lh3.googleusercontent.com/d/${f.id}=w400`,
+        `https://drive.google.com/thumbnail?id=${f.id}&sz=w400`,
+      ].filter(Boolean);
+      let idx = 0;
+      function tryNext() {
+        if (idx >= urls.length) {
+          if (sk) sk.querySelector('.photo-skeleton-num').textContent = '✕';
+          return;
+        }
+        img.onload = () => {
+          img.classList.add('loaded');
+          if (sk) sk.classList.add('hide');
+        };
+        img.onerror = () => { idx++; tryNext(); };
+        img.src = urls[idx++];
+      }
+      tryNext();
+    });
+
+    // Render pagination
+    renderPagination(page, perPage, total);
+  }
+
+  function removePhoto(fileId) {
+    _browseFiles = _browseFiles.filter(f => f.id !== fileId);
+    document.getElementById('browseCountNum').textContent = _browseFiles.length;
+    // Stay on current page, but go to prev page if this was the last on this page
+    const perPage = parseInt(document.getElementById('perPageSel').value);
+    const totalPages = perPage === 0 ? 1 : Math.ceil(_browseFiles.length / perPage);
+    if (_browsePage > totalPages) _browsePage = Math.max(1, totalPages);
+    renderPage(_browsePage);
+  }
+
+  function renderPagination(current, perPage, total) {
+    const bar = document.getElementById('paginationBar');
+    if (perPage === 0 || total <= perPage) { bar.innerHTML = ''; return; }
+
+    const totalPages = Math.ceil(total / perPage);
+    let html = '';
+
+    // Prev
+    html += `<button class="page-btn" ${current===1?'disabled':''} onclick="renderPage(${current-1})">‹ Prev</button>`;
+
+    // Page numbers (show max 7)
+    let start = Math.max(1, current - 3);
+    let end   = Math.min(totalPages, start + 6);
+    if (end - start < 6) start = Math.max(1, end - 6);
+
+    if (start > 1) html += `<button class="page-btn" onclick="renderPage(1)">1</button>${start>2?'<span style="color:#475569;align-self:center">…</span>':''}`;
+    for (let p = start; p <= end; p++) {
+      html += `<button class="page-btn${p===current?' active':''}" onclick="renderPage(${p})">${p}</button>`;
+    }
+    if (end < totalPages) html += `${end<totalPages-1?'<span style="color:#475569;align-self:center">…</span>':''}<button class="page-btn" onclick="renderPage(${totalPages})">${totalPages}</button>`;
+
+    // Next
+    html += `<button class="page-btn" ${current===totalPages?'disabled':''} onclick="renderPage(${current+1})">Next ›</button>`;
+
+    bar.innerHTML = html;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Lightbox — fullUrl is lh3 original, fallback to high-res thumbnail
+  function openLightbox(fileId, name, fullUrl) {
+    const lb  = document.getElementById('photoLightbox');
+    const img = document.getElementById('lbImg');
+    // Show spinner placeholder while loading
+    img.style.opacity = '0.3';
+    img.src = fullUrl || `https://lh3.googleusercontent.com/d/${fileId}`;
+    img.onload  = () => { img.style.opacity = '1'; };
+    img.onerror = () => {
+      // fallback to high-res thumbnail
+      img.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`;
+      img.style.opacity = '1';
+    };
+    document.getElementById('lbName').textContent = name;
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox(e) {
+    if (e && e.target !== document.getElementById('photoLightbox') &&
+            e.target !== document.getElementById('lbClose')) return;
+    document.getElementById('photoLightbox').classList.remove('open');
+    document.getElementById('lbImg').src = '';
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox({target: document.getElementById('photoLightbox')});
+  });
+
+  // Submit event from Browse tab
+  async function submitBrowseEvent() {
+    const name = document.getElementById('browseEventName').value.trim();
+    const fromDate = document.getElementById('browseFromDate').value.trim();
+    const toDate = document.getElementById('browseToDate').value.trim();
+
+    if (!name) { toast('⚠ Please enter an Event Name.', '#f59e0b'); return; }
+    if (!_browseFolderId) { toast('⚠ Find photos first.', '#f59e0b'); return; }
+
+    // Transfer Browse tab fields to Drive tab fields
+    document.getElementById('eventName').value = name;
+    if (fromDate) document.getElementById('eventFromDate').value = fromDate;
+    if (toDate) document.getElementById('eventToDate').value = toDate;
+    document.getElementById('driveLink').value =
+      `https://drive.google.com/drive/folders/${_browseFolderId}`;
+
+    switchTab('drive');
+    await submitEvent();
   }
 
   /* ─────────────────────────────────────────────────────

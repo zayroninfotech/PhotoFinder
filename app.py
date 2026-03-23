@@ -6,6 +6,10 @@ User        → scans QR → uploads selfie → sees matched photos → download
 """
 
 import os, re, io, json, uuid, zipfile, smtplib, threading, shutil, hmac, hashlib, tempfile
+
+# Suppress TensorFlow/Keras warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_SUPPRESS_CONVERSION_WARNING'] = '1'
 from pymongo import MongoClient
 try:
     import razorpay as _rzp_lib
@@ -71,25 +75,36 @@ def _ucol():
     db = _get_db()
     return db["users"] if db is not None else None
 
-# InsightFace is loaded lazily to avoid OOM on startup
-_insight_app  = None
+def _pcol():
+    """Return the 'event_photos' collection or None (JSON fallback)."""
+    db = _get_db()
+    if db is not None:
+        col = db["event_photos"]
+        col.create_index([("event_id", 1), ("admin_id", 1)], background=True)
+        col.create_index([("created_at", 1)], background=True)
+        return col
+    return None
+
+# Face detection is loaded lazily to avoid OOM on startup
 FACE_OK       = False
-_insight_tried = False   # only warn once
+_face_tried = False   # only warn once
 
 def _load_insight():
-    global _insight_app, FACE_OK, _insight_tried
-    if _insight_tried:          # already attempted — return cached result
+    global FACE_OK, _face_tried
+    if _face_tried:          # already attempted — return cached result
         return FACE_OK
-    _insight_tried = True
+    _face_tried = True
     try:
-        from insightface.app import FaceAnalysis
-        _insight_app = FaceAnalysis(name="buffalo_sc",
-                                    providers=["CPUExecutionProvider"])
-        _insight_app.prepare(ctx_id=0, det_size=(320, 320))
+        # Suppress TensorFlow/Keras warnings
+        import warnings
+        warnings.filterwarnings('ignore', category=DeprecationWarning)
+        warnings.filterwarnings('ignore', category=FutureWarning)
+        from deepface import DeepFace
         FACE_OK = True
-        print("[INFO] InsightFace loaded OK")
-    except Exception:
-        FACE_OK = False   # InsightFace not installed — face matching disabled
+        print(f"[INFO] DeepFace loaded OK with model={config.FACE_MODEL}")
+    except Exception as e:
+        FACE_OK = False
+        print(f"[WARN] DeepFace unavailable: {e}")
     return FACE_OK
 
 # ── App setup ──────────────────────────────────────────────────────────────────
@@ -134,11 +149,11 @@ with app.app_context():
     except Exception:
         pass
 
-# ── Auto-sync: check Drive for new photos every 15 minutes ────────────────────
+# ── Auto-sync: check Drive for new photos every 15 seconds ────────────────────
 _sync_locks = {}   # per-event lock to prevent concurrent syncs
 
 def _auto_sync_all_events():
-    """Background job — runs every 15 min.
+    """Background job — runs every 15 sec.
        Re-runs gdown for each ready event (gdown skips already-downloaded files).
        Only triggers reindex if new images appear in the images/ dir."""
     import threading
@@ -195,15 +210,15 @@ def _auto_sync_all_events():
             pass
     finally:
         import threading
-        threading.Timer(900, _auto_sync_all_events).start()  # every 15 minutes
+        threading.Timer(15, _auto_sync_all_events).start()  # every 15 seconds
 
-# Pre-warm InsightFace model on startup (so first search is instant)
+# Pre-warm MediaPipe model on startup (so first search is instant)
 def _prewarm_insight():
     try:
         _load_insight()
-        print("[INFO] InsightFace pre-warmed on startup")
+        print("[INFO] MediaPipe pre-warmed on startup")
     except Exception as e:
-        print(f"[WARN] InsightFace pre-warm failed: {e}")
+        print(f"[WARN] MediaPipe pre-warm failed: {e}")
 
 import threading as _threading
 _threading.Thread(target=_prewarm_insight, daemon=True).start()
@@ -442,6 +457,19 @@ def _superadmin_required(f):
 
 # ── Drive / processing helpers ────────────────────────────────────────────────
 
+_drive_cache: dict = {}   # folder_id -> {"ts": float, "files": list}
+_DRIVE_CACHE_TTL  = 600   # 10 minutes
+
+def _cached_drive_images(folder_id: str) -> list:
+    import time
+    entry = _drive_cache.get(folder_id)
+    if entry and (time.time() - entry["ts"]) < _DRIVE_CACHE_TTL:
+        return entry["files"]
+    files = _scrape_drive_files(folder_id)
+    if files:
+        _drive_cache[folder_id] = {"ts": time.time(), "files": files}
+    return files
+
 def get_folder_id(link: str):
     m = re.search(r"/folders/([a-zA-Z0-9_-]+)", link)
     return m.group(1) if m else None
@@ -545,11 +573,26 @@ def build_encodings(event_dir: Path, status_path: Path):
             existing = {}
 
     # ── STEP 1: Scrape Drive folder for file IDs ──────────────────────────────
-    drive_files = []
     if folder_id:
         _set_status(status_path, "downloading", "Scanning Drive folder…")
         drive_files = _scrape_drive_files(folder_id)
-        if not drive_files:
+
+        if drive_files:
+            images_dir.mkdir(parents=True, exist_ok=True)
+            to_download = [f for f in drive_files
+                           if not (images_dir / f["name"]).exists()]
+            if to_download:
+                _set_status(status_path, "downloading",
+                            f"Downloading {len(to_download)} new photo(s)…")
+                def _dl(item):
+                    dest = images_dir / item["name"]
+                    ok = _download_drive_file(item["id"], dest)
+                    if not ok:
+                        print(f"[WARN] Could not download {item['name']}")
+                with _TPE(max_workers=4) as pool:
+                    list(pool.map(_dl, to_download))
+        else:
+            # Scraping returned 0 — set error, folder may not be public
             _set_status(status_path, "error",
                         "No images found. Make sure your Google Drive folder is "
                         "shared publicly (Anyone with the link → Viewer).")
@@ -557,73 +600,68 @@ def build_encodings(event_dir: Path, status_path: Path):
             _save_meta(event_dir / "meta.json", meta)
             return
 
-    # ── STEP 2: If InsightFace not available — store file IDs only (instant) ──
-    if not _load_insight():
-        # No face-matching possible; just register files so they can be served
-        new_entries = list(existing.values())
-        known = {e["filename"] for e in new_entries}
-        for f in drive_files:
-            if f["name"] not in known:
-                new_entries.append({"filename": f["name"], "file_id": f["id"], "embedding": None})
-        with open(str(enc_path), "wb") as fh:
-            pickle.dump(new_entries, fh)
-        photo_count = len(drive_files) or len(new_entries)
-        meta["status"]      = "ready"
-        meta["photo_count"] = photo_count
+    # ── STEP 2: Encode all local images ───────────────────────────────────────
+    imgs = []
+    if images_dir.exists():
+        imgs = [p for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS]
+
+    if not imgs:
+        msg = ("No images found. Make sure your Google Drive folder is shared "
+               "publicly (Anyone with the link → Viewer).")
+        _set_status(status_path, "error", msg)
+        meta["status"] = "error"
         _save_meta(event_dir / "meta.json", meta)
-        _set_status(status_path, "ready", f"Ready – {photo_count} photos indexed")
         return
 
-    # ── STEP 3: InsightFace available — download thumbnails + encode ───────────
-    import cv2, tempfile as _tf
-    to_encode = [f for f in drive_files if f["name"] not in existing]
-    cached    = [existing[f["name"]] for f in drive_files if f["name"] in existing]
-    _lock       = _th.Lock()
-    new_entries = list(cached)
-    done_count  = [len(cached)]
-    total       = len(drive_files)
+    _set_status(status_path, "indexing", f"Indexing {len(imgs)} photo(s)…")
 
-    _set_status(status_path, "indexing", f"Indexing {total} photo(s)…")
+    if _load_insight():
+        from deepface import DeepFace
+        to_process  = [p for p in imgs if p.name not in existing]
+        cached      = [existing[p.name] for p in imgs if p.name in existing]
+        _lock       = _th.Lock()
+        new_entries = list(cached)
+        done_count  = [len(cached)]
 
-    def _encode_drive(item):
-        fid, fname = item["id"], item["name"]
-        tmp = Path(_tf.mktemp(suffix=Path(fname).suffix or ".jpg"))
-        try:
-            if not _dl_thumb(fid, tmp):
+        def _encode_local(img_path):
+            try:
+                # Use DeepFace to extract face embedding
+                result = DeepFace.represent(
+                    img_path=str(img_path),
+                    model_name=config.FACE_MODEL,
+                    detector_backend=config.FACE_DETECTOR,
+                    enforce_detection=True  # FIXED: Only match actual faces (no non-face images)
+                )
+                if not result:
+                    return []
+                # Extract embedding from first detected face (or image if no face)
+                emb = np.array(result[0]["embedding"], dtype=np.float32)
+                return [{
+                    "path":      str(img_path),
+                    "filename":  img_path.name,
+                    "embedding": emb,
+                }]
+            except Exception as e:
+                print(f"[WARN] Could not encode {img_path.name}: {e}")
                 return []
-            img = cv2.imread(str(tmp))
-            if img is None:
-                return []
-            faces = _insight_app.get(img)
-            result = []
-            for face in faces:
-                emb = face.embedding.astype(np.float32)
-                emb = emb / np.linalg.norm(emb)
-                result.append({"filename": fname, "file_id": fid, "embedding": emb})
-            return result
-        except Exception:
-            return []
-        finally:
-            try: tmp.unlink(missing_ok=True)
-            except Exception: pass
 
-    with _TPE(max_workers=6) as pool:
-        futs = {pool.submit(_encode_drive, f): f for f in to_encode}
-        for fut in _ac(futs):
-            entries = fut.result()
-            with _lock:
-                new_entries.extend(entries)
-                done_count[0] += 1
-                _set_status(status_path, "indexing",
-                            f"Indexing photos… {done_count[0]}/{total}")
+        with _TPE(max_workers=4) as pool:
+            futs = {pool.submit(_encode_local, p): p for p in to_process}
+            for fut in _ac(futs):
+                entries = fut.result()
+                with _lock:
+                    new_entries.extend(entries)
+                    done_count[0] += 1
+                    _set_status(status_path, "indexing",
+                                f"Indexing photos… {done_count[0]}/{len(imgs)}")
 
-    with open(str(enc_path), "wb") as fh:
-        pickle.dump(new_entries, fh)
+        with open(str(enc_path), "wb") as f:
+            pickle.dump(new_entries, f)
 
     meta["status"]      = "ready"
-    meta["photo_count"] = total
+    meta["photo_count"] = len(imgs)
     _save_meta(event_dir / "meta.json", meta)
-    _set_status(status_path, "ready", f"Ready – {total} photos indexed")
+    _set_status(status_path, "ready", f"Ready – {len(imgs)} photos indexed")
 
 
 def reindex_event_bg(event_id: str):
@@ -654,43 +692,48 @@ def process_event_bg(event_id: str):
 
 def find_matches(selfie_path: Path, images_dir: Path) -> list:
     import pickle, numpy as np
+    from scipy.spatial.distance import cosine
     if not _load_insight():
         return []
     try:
-        import cv2
-        img = cv2.imread(str(selfie_path))
-        if img is None:
+        from deepface import DeepFace
+        # Extract selfie embedding using DeepFace
+        selfie_result = DeepFace.represent(
+            img_path=str(selfie_path),
+            model_name=config.FACE_MODEL,
+            detector_backend=config.FACE_DETECTOR,
+            enforce_detection=False
+        )
+        if not selfie_result:
             return []
-        faces = _insight_app.get(img)
-        if not faces:
-            return []
-        # Use the largest detected face as the selfie face
-        selfie_face = max(faces, key=lambda f: (f.bbox[2]-f.bbox[0])*(f.bbox[3]-f.bbox[1]))
-        selfie_emb  = selfie_face.embedding.astype(np.float32)
-        selfie_emb  = selfie_emb / np.linalg.norm(selfie_emb)
+        selfie_emb = np.array(selfie_result[0]["embedding"], dtype=np.float32)
+
         # Load event encodings
         enc_path = images_dir.parent / "face_encodings.pkl"
         if not enc_path.exists():
             return []
         with open(str(enc_path), "rb") as f:
             encodings = pickle.load(f)
-        threshold = 0.35   # cosine similarity — higher = stricter match
+
+        # Use cosine distance with threshold from config
+        threshold = config.FACE_THRESHOLD
         matches, seen = [], set()
         for entry in encodings:
-            emb        = entry["embedding"].astype(np.float32)
-            emb        = emb / np.linalg.norm(emb)
-            similarity = float(np.dot(selfie_emb, emb))
+            emb = np.array(entry["embedding"], dtype=np.float32)
+            # Cosine distance (0=identical, 1=orthogonal, 2=opposite)
+            distance = cosine(selfie_emb, emb)
             # Dedup key: file_id (new Drive-based) or path (legacy local)
-            dedup_key  = entry.get("file_id") or entry.get("path", "")
-            if similarity >= threshold and dedup_key not in seen:
+            dedup_key = entry.get("file_id") or entry.get("path", "")
+            if distance <= threshold and dedup_key not in seen:
                 seen.add(dedup_key)
                 matches.append({
                     "path":     entry.get("path", ""),
                     "file_id":  entry.get("file_id", ""),
                     "filename": entry["filename"],
-                    "distance": round(1.0 - similarity, 4),
+                    "distance": float(round(distance, 4)),  # Convert numpy float to Python float
                 })
         matches.sort(key=lambda x: x["distance"])
+        # Return all matching photos (sorted by similarity - lowest distance first)
         return matches
     except Exception as e:
         print(f"[WARN] find_matches error: {e}")
@@ -1387,6 +1430,10 @@ def admin_submit():
     upload_mode  = request.form.get("upload_mode", "drive")
     uploaded_files = request.files.getlist("photos")
 
+    # Date range fields
+    from_date    = request.form.get("from_date", "").strip()
+    to_date      = request.form.get("to_date", "").strip()
+
     event_id   = uuid.uuid4().hex[:10]
     event_dir  = EVENTS / event_id
     images_dir = event_dir / "images"
@@ -1400,11 +1447,14 @@ def admin_submit():
         "name":        event_name,
         "drive_link":  drive_link,
         "folder_id":   get_folder_id(drive_link) if drive_link else None,
+        "folder_name": drive_link.split("/folders/")[-1].split("?")[0] if drive_link else None,
         "user_url":    user_url,
         "status":      "processing",
         "photo_count": 0,
         "upload_mode": upload_mode,
         "owner_id":    session.get("user_id") or "superadmin",
+        "from_date":   from_date if from_date else None,
+        "to_date":     to_date if to_date else None,
         "created_at":  datetime.now().isoformat(),
     }
     _save_meta(event_dir / "meta.json", meta)
@@ -1454,6 +1504,51 @@ def admin_status(event_id):
                     "overall": mt.get("status", "unknown")})
 
 
+@app.route("/admin/events-by-date", methods=["POST"])
+@_admin_required
+def get_events_by_date():
+    """Query events by date range and user."""
+    data = request.get_json() or {}
+    from_date = data.get("from_date", "")
+    to_date = data.get("to_date", "")
+    user_id = session.get("user_id") or "superadmin"
+
+    # Load all events from local storage
+    events = []
+    if EVENTS.exists():
+        for event_dir in EVENTS.iterdir():
+            if not event_dir.is_dir():
+                continue
+            meta = _load_meta(event_dir / "meta.json")
+            if not meta:
+                continue
+
+            # Filter by owner
+            if meta.get("owner_id") != user_id and not session.get("is_superadmin"):
+                continue
+
+            # Filter by date range if provided
+            if from_date and meta.get("from_date"):
+                if meta.get("from_date") < from_date:
+                    continue
+            if to_date and meta.get("to_date"):
+                if meta.get("to_date") > to_date:
+                    continue
+
+            events.append({
+                "id": meta.get("id"),
+                "name": meta.get("name"),
+                "from_date": meta.get("from_date"),
+                "to_date": meta.get("to_date"),
+                "folder_name": meta.get("folder_name"),
+                "photo_count": meta.get("photo_count", 0),
+                "status": meta.get("status"),
+                "created_at": meta.get("created_at"),
+            })
+
+    return jsonify({"events": events, "total": len(events)})
+
+
 @app.route("/admin/add-photos/<event_id>", methods=["POST"])
 @_admin_required
 def admin_add_photos(event_id):
@@ -1481,6 +1576,122 @@ def admin_add_photos(event_id):
         t.start()
         return jsonify({"ok": True, "saved": saved})
     return jsonify({"error": "No valid images"}), 400
+
+
+def save_browse_history(folder_id, admin_id, files_list):
+    """Save photo browse history to MongoDB."""
+    try:
+        col = _pcol()
+        if col is None:
+            return  # Fallback to JSON only
+
+        doc = {
+            "folder_id": folder_id,
+            "admin_id": admin_id,
+            "file_count": len(files_list),
+            "files": [
+                {
+                    "id": f["id"],
+                    "name": f["name"],
+                    "thumb": f.get("thumb"),
+                    "full": f.get("full")
+                }
+                for f in files_list
+            ],
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        }
+
+        # Insert or update
+        col.update_one(
+            {"folder_id": folder_id, "admin_id": admin_id},
+            {"$set": doc},
+            upsert=True
+        )
+        print(f"[INFO] Saved {len(files_list)} photos to event_photos collection")
+    except Exception as e:
+        print(f"[WARN] Failed to save browse history: {e}")
+
+
+@app.route("/admin/browse-drive", methods=["POST"])
+@_admin_required
+def admin_browse_drive():
+    """Return the list of images in a public Drive folder (for the Browse tab)."""
+    data       = request.get_json(force=True)
+    drive_link = (data.get("drive_link") or "").strip()
+    force      = bool(data.get("force"))          # True → bypass cache
+    folder_id  = get_folder_id(drive_link)
+    if not folder_id:
+        return jsonify({"error": "Invalid Drive link — must contain /folders/"}), 400
+    if force:
+        _drive_cache.pop(folder_id, None)         # clear cache → fresh fetch
+    files = _cached_drive_images(folder_id)
+    result = [
+        {"id": f["id"], "name": f["name"],
+         "thumb": f"https://drive.google.com/thumbnail?id={f['id']}&sz=w800",
+         "full":  f"https://lh3.googleusercontent.com/d/{f['id']}"}
+        for f in files
+    ]
+
+    # Save to MongoDB
+    admin_id = session.get("user_id") or "superadmin"
+    save_browse_history(folder_id, admin_id, result)
+
+    return jsonify({"files": result, "total": len(result), "folder_id": folder_id})
+
+
+@app.route("/admin/browse-history", methods=["GET"])
+@_admin_required
+def get_browse_history():
+    """Get browse history for current admin."""
+    admin_id = session.get("user_id") or "superadmin"
+    col = _pcol()
+
+    if col is None:
+        return jsonify({"history": []})
+
+    try:
+        records = list(col.find(
+            {"admin_id": admin_id},
+            {"files": 0}  # Exclude large files array for summary view
+        ).sort("updated_at", -1).limit(50))
+
+        for r in records:
+            r["_id"] = str(r.get("_id", ""))
+
+        return jsonify({
+            "history": records,
+            "total": len(records)
+        })
+    except Exception as e:
+        print(f"[WARN] Failed to get browse history: {e}")
+        return jsonify({"history": [], "error": str(e)})
+
+
+@app.route("/admin/browse-history/<folder_id>", methods=["GET"])
+@_admin_required
+def get_browse_history_detail(folder_id):
+    """Get detailed browse history for a specific folder."""
+    admin_id = session.get("user_id") or "superadmin"
+    col = _pcol()
+
+    if col is None:
+        return jsonify({"history": None})
+
+    try:
+        record = col.find_one({
+            "folder_id": folder_id,
+            "admin_id": admin_id
+        })
+
+        if not record:
+            return jsonify({"history": None, "error": "Not found"}), 404
+
+        record["_id"] = str(record.get("_id", ""))
+        return jsonify({"history": record})
+    except Exception as e:
+        print(f"[WARN] Failed to get browse history detail: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/admin/reindex/<event_id>", methods=["POST"])
@@ -1587,26 +1798,29 @@ def upload_selfie(event_id):
     except Exception as e:
         return jsonify({"error": f"Could not read image: {e}"}), 400
 
-    # Validate that uploaded image actually contains a face
-    if _load_insight():
-        try:
-            import cv2
-            img_cv = cv2.imread(str(selfie_path))
-            if img_cv is None:
-                selfie_path.unlink(missing_ok=True)
-                return jsonify({"error": "❌ Could not read image. Please try again."}), 400
-            detected = _insight_app.get(img_cv)
-            if not detected:
-                selfie_path.unlink(missing_ok=True)
-                return jsonify({"error": "❌ No face detected. Please upload a clear selfie with your face visible."}), 400
-        except Exception:
-            selfie_path.unlink(missing_ok=True)
-            return jsonify({"error": "❌ No face detected. Please upload a clear selfie with your face visible."}), 400
+    # Validate that uploaded image is readable
+    try:
+        import cv2
 
+        img_cv = cv2.imread(str(selfie_path))
+        if img_cv is None:
+            selfie_path.unlink(missing_ok=True)
+            return jsonify({"error": "❌ Could not read image. Please try again."}), 400
+
+        h, w = img_cv.shape[:2]
+        if h < 50 or w < 50:
+            selfie_path.unlink(missing_ok=True)
+            return jsonify({"error": "❌ Image too small. Please upload a larger photo."}), 400
+    except Exception as e:
+        selfie_path.unlink(missing_ok=True)
+        return jsonify({"error": f"❌ Error validating image: {e}"}), 400
+
+    # Find matching photos
     matches = find_matches(selfie_path, images_dir)
+
     if not matches:
         selfie_path.unlink(missing_ok=True)
-        return jsonify({"error": "No matching photos found. Try a clearer selfie."}), 404
+        return jsonify({"error": "No photos in this event."}), 404
 
     res_dir = RES / sid
     res_dir.mkdir(parents=True, exist_ok=True)
@@ -1798,6 +2012,239 @@ def send_email():
         return jsonify({"ok": True, "message": f"Photos sent to {email}"})
     except Exception as e:
         return jsonify({"error": f"Email failed: {e}"}), 500
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  History & Photo Browsing Routes
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/admin/events-history")
+@_admin_required
+def events_history():
+    """Return all events with metadata for history panel."""
+    events = []
+    if EVENTS.exists():
+        for event_dir in sorted(EVENTS.iterdir(), reverse=True):
+            if not event_dir.is_dir():
+                continue
+            meta = _load_meta(event_dir / "meta.json")
+            status = _load_meta(event_dir / "status.json")
+            events.append({
+                "id": event_dir.name,
+                "name": meta.get("name", "Unnamed"),
+                "folder_link": meta.get("folder_link", ""),
+                "photo_count": meta.get("photo_count", 0),
+                "status": meta.get("status", "unknown"),
+                "created_at": meta.get("created_at", ""),
+                "current_status": status.get("state", "unknown"),
+                "current_msg": status.get("message", ""),
+            })
+    return jsonify({"events": events})
+
+
+@app.route("/admin/event/<event_id>/photos")
+@_admin_required
+def event_photos(event_id):
+    """Return photos from an event (file IDs + names)."""
+    event_dir = EVENTS / event_id
+    if not event_dir.exists():
+        return jsonify({"error": "Event not found"}), 404
+
+    enc_path = event_dir / "face_encodings.pkl"
+    photos = []
+
+    if enc_path.exists():
+        try:
+            import pickle
+            with open(str(enc_path), "rb") as f:
+                entries = pickle.load(f)
+                for idx, entry in enumerate(entries):
+                    photos.append({
+                        "idx": idx,
+                        "filename": entry.get("filename", f"photo_{idx}"),
+                        "file_id": entry.get("file_id", ""),
+                        "has_face": entry.get("embedding") is not None,
+                    })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    return jsonify({"photos": photos, "count": len(photos)})
+
+
+@app.route("/admin/event/<event_id>/photo/<int:idx>")
+@_admin_required
+def event_photo_thumb(event_id, idx):
+    """Serve photo thumbnail from event."""
+    event_dir = EVENTS / event_id
+    if not event_dir.exists():
+        return "Not found", 404
+
+    enc_path = event_dir / "face_encodings.pkl"
+    if not enc_path.exists():
+        return "Not found", 404
+
+    try:
+        import pickle
+        with open(str(enc_path), "rb") as f:
+            entries = pickle.load(f)
+            if idx < 0 or idx >= len(entries):
+                return "Not found", 404
+            entry = entries[idx]
+            file_id = entry.get("file_id")
+            if not file_id:
+                return "Not found", 404
+
+            # Download thumbnail from Drive
+            import tempfile as _tf
+            tmp = Path(_tf.mktemp(suffix=".jpg"))
+            if _download_drive_file(file_id, tmp):
+                with open(str(tmp), "rb") as f:
+                    data = f.read()
+                try:
+                    tmp.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                return send_file(io.BytesIO(data), mimetype="image/jpeg")
+    except Exception:
+        pass
+
+    return "Error loading photo", 500
+
+
+@app.route("/admin/event/<event_id>/delete", methods=["POST"])
+@_admin_required
+def delete_event(event_id):
+    """Delete an event and all its data."""
+    event_dir = EVENTS / event_id
+    if not event_dir.exists():
+        return jsonify({"error": "Event not found"}), 404
+
+    try:
+        import shutil
+        shutil.rmtree(str(event_dir))
+        qr_file = QRS / f"{event_id}.png"
+        if qr_file.exists():
+            qr_file.unlink()
+        return jsonify({"ok": True, "message": f"Event '{event_id}' deleted"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/admin/event/<event_id>/export-zip", methods=["GET"])
+@_admin_required
+def export_event_zip(event_id):
+    """Export all event photos as ZIP."""
+    event_dir = EVENTS / event_id
+    if not event_dir.exists():
+        return "Not found", 404
+
+    enc_path = event_dir / "face_encodings.pkl"
+    if not enc_path.exists():
+        return "Not found", 404
+
+    try:
+        import pickle
+        with open(str(enc_path), "rb") as f:
+            entries = pickle.load(f)
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for idx, entry in enumerate(entries):
+                file_id = entry.get("file_id")
+                fname = entry.get("filename", f"photo_{idx}.jpg")
+                if file_id:
+                    try:
+                        import tempfile as _tf
+                        tmp = Path(_tf.mktemp(suffix=".jpg"))
+                        if _download_drive_file(file_id, tmp):
+                            zf.write(str(tmp), arcname=fname)
+                            tmp.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+
+        buf.seek(0)
+        return send_file(buf, mimetype="application/zip",
+                        as_attachment=True, download_name=f"{event_id}_photos.zip")
+    except Exception as e:
+        return f"Error: {e}", 500
+
+
+@app.route("/admin/events-history/search")
+@_admin_required
+def search_events():
+    """Search events by name."""
+    query = request.args.get("q", "").lower()
+    events = []
+
+    if EVENTS.exists():
+        for event_dir in sorted(EVENTS.iterdir(), reverse=True):
+            if not event_dir.is_dir():
+                continue
+            meta = _load_meta(event_dir / "meta.json")
+            status = _load_meta(event_dir / "status.json")
+            name = meta.get("name", "").lower()
+
+            if query in name or not query:
+                events.append({
+                    "id": event_dir.name,
+                    "name": meta.get("name", "Unnamed"),
+                    "folder_link": meta.get("folder_link", ""),
+                    "photo_count": meta.get("photo_count", 0),
+                    "status": meta.get("status", "unknown"),
+                    "created_at": meta.get("created_at", ""),
+                    "current_status": status.get("state", "unknown"),
+                    "current_msg": status.get("message", ""),
+                })
+
+    return jsonify({"events": events, "count": len(events)})
+
+
+@app.route("/admin/event/<event_id>/view-history", methods=["POST"])
+@_admin_required
+def log_event_view(event_id):
+    """Log event view in MongoDB for analytics."""
+    uid = session.get("user_id", "unknown")
+    col = _get_db()
+    if col is None:
+        return jsonify({"ok": True}), 200  # Silent fail if no MongoDB
+
+    try:
+        col_history = col.db["event_views"] if hasattr(col, 'db') else _get_db()["event_views"]
+        col_history.insert_one({
+            "user_id": uid,
+            "event_id": event_id,
+            "viewed_at": datetime.utcnow().isoformat(),
+            "ip": request.remote_addr,
+        })
+    except Exception:
+        pass  # Silently ignore logging errors
+
+    return jsonify({"ok": True})
+
+
+@app.route("/admin/event-analytics/<event_id>")
+@_admin_required
+def get_event_analytics(event_id):
+    """Get analytics for an event (views, popular photos, etc.)."""
+    col = _get_db()
+    if col is None:
+        return jsonify({"views": 0, "unique_viewers": 0, "last_viewed": None})
+
+    try:
+        col_history = col["event_views"]
+        views = col_history.count_documents({"event_id": event_id})
+        unique = col_history.distinct("user_id", {"event_id": event_id})
+        last = col_history.find_one(
+            {"event_id": event_id},
+            sort=[("viewed_at", -1)]
+        )
+        return jsonify({
+            "views": views,
+            "unique_viewers": len(unique),
+            "last_viewed": last.get("viewed_at") if last else None,
+        })
+    except Exception:
+        return jsonify({"views": 0, "unique_viewers": 0, "last_viewed": None})
 
 
 @app.errorhandler(404)

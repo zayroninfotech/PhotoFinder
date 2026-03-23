@@ -19,8 +19,8 @@ SMTP_PORT      = 465
 # ── Face Recognition ─────────────────────────
 # Model choices: 'Facenet512', 'VGG-Face', 'ArcFace', 'DeepFace'
 FACE_MODEL     = "Facenet512"
-FACE_DETECTOR  = "opencv"         # 'opencv' | 'retinaface' | 'mtcnn'
-FACE_THRESHOLD = 0.40             # lower = stricter match
+FACE_DETECTOR  = "retinaface"      # Better accuracy: 'retinaface' | 'opencv' | 'mtcnn'
+FACE_THRESHOLD = 0.35              # Stricter matching (was 0.40, lower = stricter)
 
 # ── Server ────────────────────────────────────
 HOST = "0.0.0.0"

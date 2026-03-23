@@ -765,6 +765,7 @@
   let   sessionId    = null;
 
   // ── Event status ──────────────────────────────────────────────────────────
+  let statusCheckInterval = null;
   async function checkEventStatus() {
     try {
       const r = await fetch(`/event/${EVENT_ID}/status`);
@@ -782,6 +783,9 @@
     } catch {}
   }
   checkEventStatus();
+
+  // Auto-check event status every 5 seconds (real-time updates)
+  statusCheckInterval = setInterval(checkEventStatus, 5000);
 
   // ── Drag & drop ───────────────────────────────────────────────────────────
   const dz = document.getElementById('dropZone');
