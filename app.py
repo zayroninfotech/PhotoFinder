@@ -2069,9 +2069,18 @@ def events_history():
 @_admin_required
 def event_photos(event_id):
     """Return photos from an event (file IDs + names)."""
+    # Verify ownership before returning photos
+    uid = session.get("user_id")
+    is_superadmin = session.get("is_superadmin", False)
+
     event_dir = EVENTS / event_id
     if not event_dir.exists():
         return jsonify({"error": "Event not found"}), 404
+
+    # Check ownership
+    meta = _load_meta(event_dir / "meta.json")
+    if not is_superadmin and meta.get("owner_id") != uid:
+        return jsonify({"error": "Unauthorized"}), 403
 
     enc_path = event_dir / "face_encodings.pkl"
     photos = []
@@ -2098,9 +2107,18 @@ def event_photos(event_id):
 @_admin_required
 def event_photo_thumb(event_id, idx):
     """Serve photo thumbnail from event."""
+    # Verify ownership before serving photo
+    uid = session.get("user_id")
+    is_superadmin = session.get("is_superadmin", False)
+
     event_dir = EVENTS / event_id
     if not event_dir.exists():
         return "Not found", 404
+
+    # Check ownership
+    meta = _load_meta(event_dir / "meta.json")
+    if not is_superadmin and meta.get("owner_id") != uid:
+        return "Unauthorized", 403
 
     enc_path = event_dir / "face_encodings.pkl"
     if not enc_path.exists():
@@ -2138,9 +2156,18 @@ def event_photo_thumb(event_id, idx):
 @_admin_required
 def delete_event(event_id):
     """Delete an event and all its data."""
+    # Verify ownership before deleting
+    uid = session.get("user_id")
+    is_superadmin = session.get("is_superadmin", False)
+
     event_dir = EVENTS / event_id
     if not event_dir.exists():
         return jsonify({"error": "Event not found"}), 404
+
+    # Check ownership
+    meta = _load_meta(event_dir / "meta.json")
+    if not is_superadmin and meta.get("owner_id") != uid:
+        return jsonify({"error": "Unauthorized"}), 403
 
     try:
         import shutil
