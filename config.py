@@ -36,3 +36,16 @@ MONGODB_DB  = "photofinder"
 # Sign up at https://razorpay.com  → Settings → API Keys → Generate Test Key
 RAZORPAY_KEY_ID     = "rzp_test_SRzQUI8EhzQGZv"
 RAZORPAY_KEY_SECRET = "Cx2hPbtdTw8HTTGWVhDgUtm2"
+
+# ── Quick Subscription Plans (UPI) ───────────────────────────────────────────────────────
+# Plans for user subscriptions via UPI QR code payment
+QUICK_SUBSCRIPTION_PLANS = {
+    "1day": {"days": 1, "amount": 1, "label": "1 Day Access"},
+    "2day": {"days": 2, "amount": 3, "label": "2 Days Access"},
+    "4day": {"days": 4, "amount": 5, "label": "4 Days Access"},
+}
+
+# ── UPI Configuration ────────────────────────────────────────────────────────────────────
+# UPI ID for receiving payments (merchant UPI)
+UPI_MERCHANT_ID = "saivanteddu@ybl"  # Your UPI ID
+UPI_MERCHANT_NAME = "Zayro Lens"

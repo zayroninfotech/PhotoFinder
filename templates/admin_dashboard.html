@@ -701,6 +701,7 @@
   </div>
   <div class="header-right">
     <a href="/admin/dashboard" style="padding:8px 16px; background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.3); color:#60a5fa; border-radius:8px; font-size:.82rem; font-weight:600; text-decoration:none; transition: all .2s; cursor:pointer;" onmouseover="this.style.background='rgba(59,130,246,.2)'" onmouseout="this.style.background='rgba(59,130,246,.1)'">🏠 Home</a>
+    <button onclick="openSubscriptionModal()" style="padding:8px 16px; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3); color:#f59e0b; border-radius:8px; font-size:.82rem; font-weight:600; text-decoration:none; transition: all .2s; cursor:pointer;" onmouseover="this.style.background='rgba(245,158,11,.2)'" onmouseout="this.style.background='rgba(245,158,11,.1)'">💳 Get Subscription</button>
     {% if is_superadmin %}
     <a href="/superadmin/dashboard" style="padding:8px 16px; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3); color:#f59e0b; border-radius:8px; font-size:.82rem; font-weight:600; text-decoration:none; transition: all .2s; cursor:pointer;" onmouseover="this.style.background='rgba(245,158,11,.2)'" onmouseout="this.style.background='rgba(245,158,11,.1)'">⚡ Superadmin</a>
     {% endif %}
@@ -767,7 +768,7 @@
             <h2 style="font-size: 1.8rem; font-weight: 800; margin: 0; margin-bottom: 4px;">Dashboard</h2>
             <p style="color: var(--muted); font-size: .95rem; margin: 0;">AI-powered face recognition. Organize events, find photos instantly.</p>
           </div>
-          <button onclick="toggleEventsDashboard()" style="background: rgba(59,130,246,.15); border: 1px solid rgba(59,130,246,.3); color: #60a5fa; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: .9rem; font-weight: 600; white-space: nowrap; transition: all .2s;">
+          <button onclick="checkSubscriptionThenAction(toggleEventsDashboard, 'view events')" style="background: rgba(59,130,246,.15); border: 1px solid rgba(59,130,246,.3); color: #60a5fa; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: .9rem; font-weight: 600; white-space: nowrap; transition: all .2s;">
             📋 View All Events
           </button>
         </div>
@@ -1304,6 +1305,16 @@
   let selectedFiles = [];
 
   function switchTab(tab) {
+    // Check subscription before allowing to create event tabs
+    if (tab === 'drive' || tab === 'browse' || tab === 'files') {
+      const subActive = {{ 'true' if sub_active else 'false' }};
+      if (!subActive) {
+        toast('❌ Your subscription has expired. Please renew to create events.', '#ef4444');
+        setTimeout(() => showSubscriptionExpiredModal(), 500);
+        return;
+      }
+    }
+
     currentTab = tab;
     document.getElementById('mainTab').style.display  = tab === 'main'   ? '' : 'none';
     document.getElementById('driveTab').style.display  = tab === 'drive'  ? '' : 'none';
@@ -1341,6 +1352,14 @@
   });
 
   async function submitEvent() {
+    // Check subscription first
+    const subActive = {{ 'true' if sub_active else 'false' }};
+    if (!subActive) {
+      toast('❌ Your subscription has expired. Please renew to create events.', '#ef4444');
+      setTimeout(() => showSubscriptionExpiredModal(), 500);
+      return;
+    }
+
     const name = document.getElementById('eventName').value.trim();
     if (!name) { toast('⚠ Please enter an event name.', '#f59e0b'); return; }
 
@@ -1386,7 +1405,16 @@
     btn.disabled = false;
     btn.textContent = 'Generate QR Code →';
 
-    if (!resp.ok) { toast('❌ ' + (data.error || 'Failed'), '#ef4444'); return; }
+    if (!resp.ok) {
+      // Handle subscription expired
+      if (data.error === 'subscription_expired') {
+        toast('❌ Your subscription has expired. Please renew to continue.', '#ef4444');
+        setTimeout(() => showSubscriptionExpiredModal(), 500);
+        return;
+      }
+      toast('❌ ' + (data.error || 'Failed'), '#ef4444');
+      return;
+    }
 
     currentEventId = data.event_id;
     currentUserUrl = data.user_url;
@@ -1461,6 +1489,14 @@
   }
 
   function selectEvent(id, name, status) {
+    // Check subscription first
+    const subActive = {{ 'true' if sub_active else 'false' }};
+    if (!subActive) {
+      toast('❌ Your subscription has expired. Please renew to view events.', '#ef4444');
+      setTimeout(() => showSubscriptionExpiredModal(), 500);
+      return;
+    }
+
     // Highlight
     document.querySelectorAll('.event-item').forEach(el => el.classList.remove('active'));
     document.querySelector(`[data-id="${id}"]`)?.classList.add('active');
@@ -1761,6 +1797,14 @@
 
   // Submit event from Browse tab
   async function submitBrowseEvent() {
+    // Check subscription first
+    const subActive = {{ 'true' if sub_active else 'false' }};
+    if (!subActive) {
+      toast('❌ Your subscription has expired. Please renew to create events.', '#ef4444');
+      setTimeout(() => showSubscriptionExpiredModal(), 500);
+      return;
+    }
+
     const name = document.getElementById('browseEventName').value.trim();
     const fromDate = document.getElementById('browseFromDate').value.trim();
     const toDate = document.getElementById('browseToDate').value.trim();
@@ -2059,6 +2103,289 @@
 </script>
 -->
 <!-- ══ END OF COMMENTED-OUT RAZORPAY / SUBSCRIPTION BLOCK ══ -->
+
+<!-- ══ SUBSCRIPTION PAYMENT MODAL (UPI QR) ══ -->
+<div id="subscriptionModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.7); z-index:1000; display:flex; align-items:center; justify-content:center;">
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; width:90%; max-width:600px; padding:32px; box-shadow:0 20px 60px rgba(0,0,0,.4);">
+
+    <!-- Step 1: Plan Selection -->
+    <div id="step-plans" style="text-align:center;">
+      <h2 style="margin-bottom:24px; font-size:1.5rem;">💳 Get Subscription</h2>
+      <p style="color:var(--muted); margin-bottom:32px;">Choose a plan to access all features</p>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:16px; margin-bottom:24px;">
+        <div class="plan-card" onclick="selectPlan('1day', 1, '1 Day Access')" style="cursor:pointer; padding:20px; border:2px solid rgba(245,158,11,.3); border-radius:12px; background:rgba(245,158,11,.05); transition:all .2s;">
+          <div style="font-size:2rem; font-weight:700; color:#f59e0b; margin-bottom:8px;">₹1</div>
+          <div style="color:var(--muted); font-size:.9rem;">1 Day</div>
+        </div>
+        <div class="plan-card" onclick="selectPlan('2day', 3, '2 Days Access')" style="cursor:pointer; padding:20px; border:2px solid rgba(245,158,11,.3); border-radius:12px; background:rgba(245,158,11,.05); transition:all .2s;">
+          <div style="font-size:2rem; font-weight:700; color:#f59e0b; margin-bottom:8px;">₹3</div>
+          <div style="color:var(--muted); font-size:.9rem;">2 Days</div>
+        </div>
+        <div class="plan-card" onclick="selectPlan('4day', 5, '4 Days Access')" style="cursor:pointer; padding:20px; border:2px solid rgba(245,158,11,.3); border-radius:12px; background:rgba(245,158,11,.05); transition:all .2s;">
+          <div style="font-size:2rem; font-weight:700; color:#f59e0b; margin-bottom:8px;">₹5</div>
+          <div style="color:var(--muted); font-size:.9rem;">4 Days</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: QR Code -->
+    <div id="step-qr" style="text-align:center; display:none;">
+      <h2 style="margin-bottom:24px; font-size:1.5rem;">Scan to Pay</h2>
+      <p style="color:var(--muted); margin-bottom:16px;">Scan with PhonePe or Google Pay</p>
+      <div id="qrContainer" style="margin:24px 0;">
+        <img src="/static/upi_qr.png" alt="UPI QR Code" style="max-width:280px; border-radius:12px; border:2px solid var(--border);">
+      </div>
+      <p style="color:#22c55e; font-size:.9rem; margin-top:12px;"><strong>saivanteddu@ybl</strong></p>
+      <p style="color:var(--muted); font-size:.9rem;">Amount: <strong id="qrAmount" style="color:#f59e0b;">₹0</strong></p>
+      <button onclick="backToPlan()" style="margin-top:16px; padding:8px 16px; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3); color:#f59e0b; border-radius:8px; cursor:pointer; font-weight:600;">← Change Plan</button>
+    </div>
+
+    <!-- Step 3: Verify Payment -->
+    <div id="step-verify" style="display:none;">
+      <h2 style="margin-bottom:24px; font-size:1.5rem;">✓ Confirm Payment</h2>
+      <div style="background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3); border-radius:8px; padding:16px; margin-bottom:20px; color:#22c55e;">
+        <strong>Payment initiated!</strong> Complete the transaction in your UPI app and enter the transaction ID below.
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block; color:var(--muted); font-size:.9rem; margin-bottom:8px;">Transaction ID</label>
+        <input type="text" id="txnId" placeholder="E.g., 202403241234567" style="width:100%; padding:12px; background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:1rem;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px;">
+        <input type="checkbox" id="confirmPayment" style="cursor:pointer; width:18px; height:18px;">
+        <label for="confirmPayment" style="cursor:pointer; color:var(--muted); font-size:.9rem;">I have completed the payment</label>
+      </div>
+    </div>
+
+    <!-- Step 4: Success -->
+    <div id="step-success" style="text-align:center; display:none;">
+      <div style="font-size:3rem; margin-bottom:16px;">✅</div>
+      <h2 style="margin-bottom:24px; font-size:1.5rem; color:#22c55e;">Payment Successful!</h2>
+      <div style="background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:left; margin-bottom:20px;">
+        <p style="margin:8px 0; color:var(--muted);"><strong>Plan:</strong> <span id="billPlan" style="color:var(--text);">-</span></p>
+        <p style="margin:8px 0; color:var(--muted);"><strong>Amount:</strong> <span id="billAmount" style="color:#f59e0b;">₹0</span></p>
+        <p style="margin:8px 0; color:var(--muted);"><strong>Valid Until:</strong> <span id="billExpiry" style="color:var(--text);">-</span></p>
+        <p style="margin:8px 0; color:var(--muted);"><strong>Transaction ID:</strong> <span id="billTxn" style="color:var(--text); font-size:.85rem;">-</span></p>
+      </div>
+      <p style="color:#22c55e; font-size:1rem; margin-top:20px;">🔄 Reloading dashboard...</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="display:flex; gap:12px; justify-content:space-between;">
+      <button onclick="closeSubscriptionModal()" id="closeBtn" style="flex:1; padding:12px; background:rgba(255,255,255,.05); border:1px solid var(--border); color:var(--text); border-radius:8px; cursor:pointer; font-weight:600; font-size:1rem;">Close</button>
+      <button id="nextBtn" onclick="nextStep()" style="flex:1; padding:12px; background:rgba(245,158,11,.2); border:1px solid #f59e0b; color:#f59e0b; border-radius:8px; cursor:pointer; font-weight:600; font-size:1rem; display:none;">Next →</button>
+      <button id="confirmBtn" onclick="confirmPayment()" style="flex:1; padding:12px; background:rgba(34,197,94,.2); border:1px solid #22c55e; color:#22c55e; border-radius:8px; cursor:pointer; font-weight:600; font-size:1rem; display:none;">Confirm Payment</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _currentPlan = null;
+let _currentSubId = null;
+
+function closeSubscriptionModal() {
+  document.getElementById('subscriptionModal').style.display = 'none';
+}
+
+// Check subscription before allowing actions
+function checkSubscriptionThenAction(action, actionName) {
+  const subActive = {{ 'true' if sub_active else 'false' }};
+  if (!subActive) {
+    // Subscription expired - show popup
+    toast('❌ Your subscription has expired. Please renew to ' + actionName + '.', '#ef4444');
+    setTimeout(() => showSubscriptionExpiredModal(), 500);
+    return false;
+  }
+  // Subscription active - execute action
+  if (typeof action === 'function') {
+    action();
+  }
+  return true;
+}
+
+function selectPlan(planId, amount, label) {
+  _currentPlan = { id: planId, amount, label };
+  document.getElementById('qrAmount').textContent = '₹' + amount;
+
+  // Create subscription record
+  fetch('/api/subscription/initiate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan_id: planId })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      _currentSubId = data.subscription_id;
+      showStep('qr');
+    } else {
+      alert('Error: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(e => alert('Error: ' + e));
+}
+
+function showStep(stepName) {
+  document.getElementById('step-plans').style.display = stepName === 'plans' ? 'block' : 'none';
+  document.getElementById('step-qr').style.display = stepName === 'qr' ? 'block' : 'none';
+  document.getElementById('step-verify').style.display = stepName === 'verify' ? 'block' : 'none';
+  document.getElementById('step-success').style.display = stepName === 'success' ? 'block' : 'none';
+
+  document.getElementById('nextBtn').style.display = stepName === 'qr' ? 'block' : 'none';
+  document.getElementById('confirmBtn').style.display = stepName === 'verify' ? 'block' : 'none';
+  document.getElementById('closeBtn').textContent = stepName === 'success' ? 'Done' : 'Close';
+}
+
+function nextStep() {
+  showStep('verify');
+}
+
+function backToPlan() {
+  showStep('plans');
+}
+
+function showSubscriptionExpiredModal() {
+  // Show modal with special message about expired subscription
+  const modal = document.getElementById('subscriptionModal');
+  const stepPlans = document.getElementById('step-plans');
+  stepPlans.innerHTML = `
+    <div style="text-align:center;">
+      <div style="font-size:3.5rem; margin-bottom:16px;">⏰</div>
+      <h2 style="margin-bottom:16px; font-size:1.5rem; color:#ef4444;">Subscription Expired</h2>
+      <p style="color:var(--muted); margin-bottom:24px; font-size:1.1rem;">Your subscription has expired.</p>
+      <p style="color:var(--muted); margin-bottom:32px;">Renew now to continue accessing all features</p>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:16px; margin-bottom:24px;">
+        <div class="plan-card" onclick="selectPlan('1day', 1, '1 Day Access')" style="cursor:pointer; padding:20px; border:2px solid rgba(245,158,11,.3); border-radius:12px; background:rgba(245,158,11,.05); transition:all .2s;">
+          <div style="font-size:2rem; font-weight:700; color:#f59e0b; margin-bottom:8px;">₹1</div>
+          <div style="color:var(--muted); font-size:.9rem;">1 Day</div>
+        </div>
+        <div class="plan-card" onclick="selectPlan('2day', 3, '2 Days Access')" style="cursor:pointer; padding:20px; border:2px solid rgba(245,158,11,.3); border-radius:12px; background:rgba(245,158,11,.05); transition:all .2s;">
+          <div style="font-size:2rem; font-weight:700; color:#f59e0b; margin-bottom:8px;">₹3</div>
+          <div style="color:var(--muted); font-size:.9rem;">2 Days</div>
+        </div>
+        <div class="plan-card" onclick="selectPlan('4day', 5, '4 Days Access')" style="cursor:pointer; padding:20px; border:2px solid rgba(245,158,11,.3); border-radius:12px; background:rgba(245,158,11,.05); transition:all .2s;">
+          <div style="font-size:2rem; font-weight:700; color:#f59e0b; margin-bottom:8px;">₹5</div>
+          <div style="color:var(--muted); font-size:.9rem;">4 Days</div>
+        </div>
+      </div>
+    </div>
+  `;
+  modal.style.display = 'flex';
+  showStep('plans');
+}
+
+// Reset plans section when reopening normal subscription flow
+function openSubscriptionModal() {
+  document.getElementById('subscriptionModal').style.display = 'flex';
+  // Reset to original plan display
+  const stepPlans = document.getElementById('step-plans');
+  stepPlans.innerHTML = `
+    <div style="text-align:center;">
+      <h2 style="margin-bottom:24px; font-size:1.5rem;">💳 Get Subscription</h2>
+      <p style="color:var(--muted); margin-bottom:32px;">Choose a plan to access all features</p>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:16px; margin-bottom:24px;">
+        <div class="plan-card" onclick="selectPlan('1day', 1, '1 Day Access')" style="cursor:pointer; padding:20px; border:2px solid rgba(245,158,11,.3); border-radius:12px; background:rgba(245,158,11,.05); transition:all .2s;">
+          <div style="font-size:2rem; font-weight:700; color:#f59e0b; margin-bottom:8px;">₹1</div>
+          <div style="color:var(--muted); font-size:.9rem;">1 Day</div>
+        </div>
+        <div class="plan-card" onclick="selectPlan('2day', 3, '2 Days Access')" style="cursor:pointer; padding:20px; border:2px solid rgba(245,158,11,.3); border-radius:12px; background:rgba(245,158,11,.05); transition:all .2s;">
+          <div style="font-size:2rem; font-weight:700; color:#f59e0b; margin-bottom:8px;">₹3</div>
+          <div style="color:var(--muted); font-size:.9rem;">2 Days</div>
+        </div>
+        <div class="plan-card" onclick="selectPlan('4day', 5, '4 Days Access')" style="cursor:pointer; padding:20px; border:2px solid rgba(245,158,11,.3); border-radius:12px; background:rgba(245,158,11,.05); transition:all .2s;">
+          <div style="font-size:2rem; font-weight:700; color:#f59e0b; margin-bottom:8px;">₹5</div>
+          <div style="color:var(--muted); font-size:.9rem;">4 Days</div>
+        </div>
+      </div>
+    </div>
+  `;
+  showStep('plans');
+}
+
+function confirmPayment() {
+  const txnId = document.getElementById('txnId').value.trim();
+  const isConfirmed = document.getElementById('confirmPayment').checked;
+
+  if (!txnId) {
+    alert('Please enter transaction ID');
+    return;
+  }
+
+  if (!isConfirmed) {
+    alert('Please confirm that payment is done');
+    return;
+  }
+
+  // Log data for debugging
+  console.log('[Payment] Confirming payment:', {
+    subscription_id: _currentSubId,
+    transaction_id: txnId,
+    plan: _currentPlan
+  });
+
+  fetch('/api/subscription/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      subscription_id: _currentSubId,
+      transaction_id: txnId
+    })
+  })
+  .then(r => {
+    console.log('[Payment] API Response Status:', r.status);
+    return r.json();
+  })
+  .then(data => {
+    console.log('[Payment] API Response Data:', data);
+
+    if (data.success) {
+      const expDate = new Date(data.expires_at);
+      document.getElementById('billPlan').textContent = _currentPlan.label;
+      document.getElementById('billAmount').textContent = '₹' + _currentPlan.amount;
+      document.getElementById('billTxn').textContent = txnId;
+      document.getElementById('billExpiry').textContent = expDate.toLocaleDateString();
+
+      showStep('success');
+      console.log('[Payment] ✅ Payment verified successfully');
+
+      // Refresh after 2 seconds with forced reload
+      setTimeout(() => {
+        console.log('[Payment] 🔄 Reloading page...');
+        window.location.href = window.location.href;
+      }, 2000);
+    } else {
+      console.log('[Payment] ❌ Verification failed:', data.error);
+      alert('Verification failed: ' + data.error);
+      // Refresh anyway to update subscription status
+      setTimeout(() => {
+        window.location.href = window.location.href;
+      }, 1500);
+    }
+  })
+  .catch(e => {
+    console.log('[Payment] ❌ Error:', e.message);
+    alert('Error: ' + e);
+    // Refresh anyway on error
+    setTimeout(() => {
+      window.location.href = window.location.href;
+    }, 1500);
+  });
+}
+
+// Page load: Check subscription status
+document.addEventListener('DOMContentLoaded', function() {
+  const subActive = {{ 'true' if sub_active else 'false' }};
+  if (!subActive) {
+    // Show warning banner/popup that subscription is expired
+    console.log('[Subscription] User subscription is expired');
+    // Show subtle warning in a toast
+    setTimeout(() => {
+      toast('⚠️ Your subscription has expired. Click "Get Subscription" to renew.', '#f59e0b');
+    }, 500);
+  }
+});
+</script>
 
 </body>
 </html>

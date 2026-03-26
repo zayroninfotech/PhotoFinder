@@ -85,6 +85,17 @@ def _pcol():
         return col
     return None
 
+def _scol():
+    """Return the 'subscriptions' collection or None (JSON fallback)."""
+    db = _get_db()
+    if db is not None:
+        col = db["subscriptions"]
+        col.create_index([("user_id", 1), ("created_at", -1)], background=True)
+        col.create_index([("status", 1)], background=True)
+        col.create_index([("subscription_id", 1)], unique=True, background=True)
+        return col
+    return None
+
 # Face detection is loaded lazily to avoid OOM on startup
 FACE_OK       = False
 _face_tried = False   # only warn once
@@ -117,11 +128,12 @@ EVENTS = DATA / "events"
 QRS    = DATA / "qrcodes"
 UPS    = DATA / "uploads"
 RES    = DATA / "results"
+SUBS   = DATA / "subscriptions"
 USERS_FILE           = DATA / "users.json"
 PAYMENT_SETTINGS_FILE = DATA / "payment_settings.json"
 PAYMENT_QR_FILE       = DATA / "payment_qr.png"
 
-for d in [EVENTS, QRS, UPS, RES]:
+for d in [EVENTS, QRS, UPS, RES, SUBS]:
     d.mkdir(parents=True, exist_ok=True)
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"}
@@ -431,16 +443,14 @@ def _admin_required(f):
     def wrapper(*args, **kwargs):
         if not session.get("admin"):
             return redirect(url_for("admin_login"))
-        # Subscription check for non-superadmin users
+        # Subscription check moved to action level (admin_submit) instead of route level
+        # Allows users with expired subscriptions to view dashboard, but blocks actions
         if not session.get("is_superadmin"):
             uid = session.get("user_id")
             if uid:
                 user = load_users().get(uid)
-                if not user or not is_subscription_active(user):
-                    session.clear()
-                    return redirect(url_for("admin_login", expired=1))
-                # Force-logout check
-                if user.get("force_logout"):
+                # Force-logout check (still applies)
+                if user and user.get("force_logout"):
                     update_user(uid, {"force_logout": False})
                     session.clear()
                     return redirect(url_for("admin_login"))
@@ -800,7 +810,7 @@ def superadmin_logout():
 def admin_login():
     error = None
     if request.args.get("expired"):
-        error = "Your subscription has expired or session ended. Please log in again."
+        error = "Session ended. Please log in again."
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -812,8 +822,6 @@ def admin_login():
             if check_password_hash(user["password"], password):
                 if not user.get("is_active", False):
                     error = "⏳ Account pending activation. Please contact the administrator."
-                elif not is_subscription_active(user):
-                    error = "❌ Your subscription has expired. Please contact the administrator to renew."
                 else:
                     # Clear any force-logout flag on fresh login
                     if user.get("force_logout"):
@@ -825,10 +833,12 @@ def admin_login():
                         session["is_superadmin"] = True
                         session["username"]      = username
                         return redirect(url_for("superadmin_dashboard"))
+                    # Allow login even if subscription expired; check will happen on action
                     session["admin"]        = True
                     session["is_superadmin"] = False
                     session["user_id"]       = uid
                     session["username"]      = username
+                    session["subscription_active"] = is_subscription_active(user)
                     return redirect(url_for("admin_dashboard"))
             else:
                 error = "Invalid username or password."
@@ -1393,8 +1403,17 @@ def admin_dashboard():
     # Pass Razorpay public key to template
     rzp_key = getattr(config, "RAZORPAY_KEY_ID", "")
     sub_active = True
-    if user_info:
-        sub_active = is_subscription_active(load_users().get(uid, {}))
+    if user_info and uid:
+        # Check subscription from MongoDB first (updated by payment), fallback to JSON
+        db = _get_db()
+        if db is not None:
+            user_from_db = db["users"].find_one({"id": uid})
+            if user_from_db:
+                sub_active = is_subscription_active(user_from_db)
+            else:
+                sub_active = is_subscription_active(load_users().get(uid, {}))
+        else:
+            sub_active = is_subscription_active(load_users().get(uid, {}))
 
     return render_template("admin_dashboard.html",
                            events=events,
@@ -2245,6 +2264,140 @@ def get_event_analytics(event_id):
         })
     except Exception:
         return jsonify({"views": 0, "unique_viewers": 0, "last_viewed": None})
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ── SUBSCRIPTIONS – UPI QR CODE PAYMENTS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+@app.route("/api/subscription/initiate", methods=["POST"])
+def subscription_initiate():
+    """Initiate subscription payment - generate QR code."""
+    try:
+        data = request.get_json()
+        plan_id = data.get("plan_id")
+        user_id = session.get("user_id")
+
+        if not plan_id or plan_id not in config.QUICK_SUBSCRIPTION_PLANS:
+            return jsonify({"error": "Invalid plan"}), 400
+
+        if not user_id:
+            return jsonify({"error": "Unauthorized"}), 401
+
+        from payment_utils import generate_subscription_qr
+        db = _get_db()
+
+        sub_id, qr_path, upi_str, expires_at = generate_subscription_qr(
+            user_id, plan_id, db
+        )
+
+        if not sub_id:
+            return jsonify({"error": "Failed to generate subscription"}), 500
+
+        # Convert QR image to base64
+        qr_full_path = SUBS / (qr_path.split('/')[-1])
+        with open(qr_full_path, "rb") as f:
+            import base64
+            qr_base64 = base64.b64encode(f.read()).decode("utf-8")
+
+        plan_info = config.QUICK_SUBSCRIPTION_PLANS[plan_id]
+
+        return jsonify({
+            "success": True,
+            "subscription_id": sub_id,
+            "qr_code_base64": qr_base64,
+            "qr_code_path": qr_path,
+            "upi_string": upi_str,
+            "plan_id": plan_id,
+            "amount": plan_info["amount"],
+            "label": plan_info["label"],
+            "days": plan_info["days"],
+            "expires_at": expires_at.isoformat()
+        })
+    except Exception as e:
+        print(f"[ERROR] subscription_initiate: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/subscription/verify", methods=["POST"])
+def subscription_verify():
+    """Verify subscription payment and activate access."""
+    try:
+        data = request.get_json()
+        subscription_id = data.get("subscription_id")
+        transaction_id = data.get("transaction_id", "manual_confirm")
+        user_id = session.get("user_id")
+
+        print(f"[PAYMENT] Verify called: sub_id={subscription_id}, txn_id={transaction_id}, user_id={user_id}")
+
+        if not subscription_id:
+            return jsonify({"error": "Missing subscription_id"}), 400
+
+        from payment_utils import verify_subscription
+        db = _get_db()
+
+        # Check if subscription exists
+        sub_record = db["subscriptions"].find_one({"subscription_id": subscription_id})
+        print(f"[PAYMENT] Found subscription: {sub_record is not None}")
+        if sub_record:
+            print(f"[PAYMENT] Subscription user_id: {sub_record.get('user_id')}, status: {sub_record.get('status')}")
+
+        success = verify_subscription(subscription_id, transaction_id, db)
+        print(f"[PAYMENT] Verification success: {success}")
+
+        if success:
+            sub = db["subscriptions"].find_one({"subscription_id": subscription_id})
+            print(f"[PAYMENT] Updated subscription: {sub}")
+
+            # Check user was updated
+            user = db["users"].find_one({"id": user_id}) if user_id else None
+            print(f"[PAYMENT] User subscription_end: {user.get('subscription_end') if user else 'N/A'}")
+
+            return jsonify({
+                "success": True,
+                "message": "Subscription activated",
+                "expires_at": sub["expires_at"].isoformat()
+            })
+        else:
+            return jsonify({"error": "Subscription not found or already verified"}), 404
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] subscription_verify: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/subscription/history", methods=["GET"])
+def subscription_history_api():
+    """Get subscription history for logged-in user."""
+    try:
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "Unauthorized"}), 401
+
+        from payment_utils import get_user_subscriptions
+        db = _get_db()
+
+        subs = get_user_subscriptions(user_id, db)
+
+        # Convert ObjectId to string for JSON serialization
+        for sub in subs:
+            if "_id" in sub:
+                sub["_id"] = str(sub["_id"])
+            if "created_at" in sub:
+                sub["created_at"] = sub["created_at"].isoformat()
+            if "expires_at" in sub:
+                sub["expires_at"] = sub["expires_at"].isoformat()
+            if "verified_at" in sub and sub["verified_at"]:
+                sub["verified_at"] = sub["verified_at"].isoformat()
+
+        return jsonify({
+            "success": True,
+            "subscriptions": subs
+        })
+    except Exception as e:
+        print(f"[ERROR] subscription_history_api: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.errorhandler(404)
