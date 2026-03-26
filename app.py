@@ -2041,6 +2041,8 @@ def send_email():
 @_admin_required
 def events_history():
     """Return all events with metadata for history panel."""
+    uid = session.get("user_id")
+    is_superadmin = session.get("is_superadmin", False)
     events = []
     if EVENTS.exists():
         for event_dir in sorted(EVENTS.iterdir(), reverse=True):
@@ -2048,16 +2050,18 @@ def events_history():
                 continue
             meta = _load_meta(event_dir / "meta.json")
             status = _load_meta(event_dir / "status.json")
-            events.append({
-                "id": event_dir.name,
-                "name": meta.get("name", "Unnamed"),
-                "folder_link": meta.get("folder_link", ""),
-                "photo_count": meta.get("photo_count", 0),
-                "status": meta.get("status", "unknown"),
-                "created_at": meta.get("created_at", ""),
-                "current_status": status.get("state", "unknown"),
-                "current_msg": status.get("message", ""),
-            })
+            # Filter: superadmin sees all, regular users see only their own
+            if is_superadmin or meta.get("owner_id") == uid:
+                events.append({
+                    "id": event_dir.name,
+                    "name": meta.get("name", "Unnamed"),
+                    "folder_link": meta.get("folder_link", ""),
+                    "photo_count": meta.get("photo_count", 0),
+                    "status": meta.get("status", "unknown"),
+                    "created_at": meta.get("created_at", ""),
+                    "current_status": status.get("state", "unknown"),
+                    "current_msg": status.get("message", ""),
+                })
     return jsonify({"events": events})
 
 
@@ -2192,6 +2196,8 @@ def export_event_zip(event_id):
 @_admin_required
 def search_events():
     """Search events by name."""
+    uid = session.get("user_id")
+    is_superadmin = session.get("is_superadmin", False)
     query = request.args.get("q", "").lower()
     events = []
 
@@ -2203,7 +2209,8 @@ def search_events():
             status = _load_meta(event_dir / "status.json")
             name = meta.get("name", "").lower()
 
-            if query in name or not query:
+            # Filter: superadmin sees all, regular users see only their own
+            if (query in name or not query) and (is_superadmin or meta.get("owner_id") == uid):
                 events.append({
                     "id": event_dir.name,
                     "name": meta.get("name", "Unnamed"),
