@@ -1285,15 +1285,44 @@
           return;
         }
 
-        photoDiv.innerHTML = `
-          <div class="photo-grid">
-            ${data.photos.map(p => `
-              <div class="photo-thumb" onclick="event.stopPropagation()" title="${p.filename}">
-                <img src="/admin/event/${eventId}/photo/${p.idx}" alt="${p.filename}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect fill=%22%231a2640%22 width=%22100%22 height=%22100%22/%3E%3C/svg%3E'">
-              </div>
-            `).join('')}
-          </div>
-        `;
+        const pageSize = 12;
+        let currentPage = 1;
+        const totalPages = Math.ceil(data.photos.length / pageSize);
+
+        const renderPage = () => {
+          const start = (currentPage - 1) * pageSize;
+          const pagPhotos = data.photos.slice(start, start + pageSize);
+
+          const html = `
+            <div class="photo-grid">
+              ${pagPhotos.map(p => `
+                <div class="photo-thumb" onclick="event.stopPropagation()" title="${p.filename}" loading="lazy">
+                  <img src="/admin/event/${eventId}/photo/${p.idx}" alt="${p.filename}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect fill=%22%231a2640%22 width=%22100%22 height=%22100%22/%3E%3C/svg%3E'">
+                </div>
+              `).join('')}
+            </div>
+            ${totalPages > 1 ? `<div style="text-align: center; margin-top: 12px; gap: 8px; display: flex; justify-content: center;">
+              <button onclick="document.getElementById('prevPage-${eventId}').click()" style="padding: 6px 12px; background: #1e3a8a; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: .8rem;" ${currentPage === 1 ? 'disabled' : ''}>← Prev</button>
+              <span style="padding: 6px 12px; color: #cbd5e1;">${currentPage}/${totalPages}</span>
+              <button onclick="document.getElementById('nextPage-${eventId}').click()" style="padding: 6px 12px; background: #1e3a8a; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: .8rem;" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
+            </div>` : ''}
+          `;
+          photoDiv.innerHTML = html;
+        };
+
+        window[`prevPage_${eventId}`] = () => {
+          if (currentPage > 1) currentPage--;
+          renderPage();
+        };
+        window[`nextPage_${eventId}`] = () => {
+          if (currentPage < totalPages) currentPage++;
+          renderPage();
+        };
+
+        document.getElementById(`prevPage-${eventId}`) = { click: window[`prevPage_${eventId}`] };
+        document.getElementById(`nextPage-${eventId}`) = { click: window[`nextPage_${eventId}`] };
+
+        renderPage();
         photoDiv.style.display = 'block';
       }
     } catch (e) {

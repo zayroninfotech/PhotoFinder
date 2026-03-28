@@ -122,6 +122,9 @@ def _load_insight():
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 
+# In-memory cache for pickle files to avoid repeated disk reads
+_pickle_cache = {}  # {event_id: (mtime, entries)}
+
 BASE   = Path(__file__).parent
 DATA   = BASE / "data"
 EVENTS = DATA / "events"
@@ -2103,6 +2106,34 @@ def event_photos(event_id):
     return jsonify({"photos": photos, "count": len(photos)})
 
 
+def _load_pickle_cached(enc_path):
+    """Load pickle file with in-memory caching to avoid repeated disk reads."""
+    global _pickle_cache
+    event_id = enc_path.parent.name
+
+    if not enc_path.exists():
+        return None
+
+    try:
+        mtime = enc_path.stat().st_mtime
+        if event_id in _pickle_cache:
+            cached_mtime, entries = _pickle_cache[event_id]
+            if cached_mtime == mtime:
+                return entries
+    except Exception:
+        pass
+
+    try:
+        import pickle
+        with open(str(enc_path), "rb") as f:
+            entries = pickle.load(f)
+            mtime = enc_path.stat().st_mtime
+            _pickle_cache[event_id] = (mtime, entries)
+            return entries
+    except Exception:
+        return None
+
+
 @app.route("/admin/event/<event_id>/photo/<int:idx>")
 @_admin_required
 def event_photo_thumb(event_id, idx):
@@ -2125,27 +2156,30 @@ def event_photo_thumb(event_id, idx):
         return "Not found", 404
 
     try:
-        import pickle
-        with open(str(enc_path), "rb") as f:
-            entries = pickle.load(f)
-            if idx < 0 or idx >= len(entries):
-                return "Not found", 404
-            entry = entries[idx]
-            file_id = entry.get("file_id")
-            if not file_id:
-                return "Not found", 404
+        entries = _load_pickle_cached(enc_path)
+        if not entries:
+            return "Error loading photos", 500
 
-            # Download thumbnail from Drive
-            import tempfile as _tf
-            tmp = Path(_tf.mktemp(suffix=".jpg"))
-            if _download_drive_file(file_id, tmp):
-                with open(str(tmp), "rb") as f:
-                    data = f.read()
-                try:
-                    tmp.unlink(missing_ok=True)
-                except Exception:
-                    pass
-                return send_file(io.BytesIO(data), mimetype="image/jpeg")
+        if idx < 0 or idx >= len(entries):
+            return "Not found", 404
+        entry = entries[idx]
+        file_id = entry.get("file_id")
+        if not file_id:
+            return "Not found", 404
+
+        # Download thumbnail from Drive
+        import tempfile as _tf
+        tmp = Path(_tf.mktemp(suffix=".jpg"))
+        if _download_drive_file(file_id, tmp):
+            with open(str(tmp), "rb") as f:
+                data = f.read()
+            try:
+                tmp.unlink(missing_ok=True)
+            except Exception:
+                pass
+            response = send_file(io.BytesIO(data), mimetype="image/jpeg")
+            response.headers["Cache-Control"] = "public, max-age=86400"
+            return response
     except Exception:
         pass
 
