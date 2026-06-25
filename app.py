@@ -464,7 +464,7 @@ def _superadmin_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not session.get("admin") or not session.get("is_superadmin"):
-            return redirect(url_for("superadmin_login"))
+            return redirect(url_for("admin_login"))
         return f(*args, **kwargs)
     return wrapper
 
@@ -772,41 +772,13 @@ def index():
     return redirect(url_for("admin_login"))
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  Superadmin dedicated login / logout
+#  Superadmin logout  (login is handled by /admin/login based on role)
 # ══════════════════════════════════════════════════════════════════════════════
-
-@app.route("/superadmin/login", methods=["GET", "POST"])
-def superadmin_login():
-    """Dedicated login page for superadmin only."""
-    if session.get("admin") and session.get("is_superadmin"):
-        return redirect(url_for("superadmin_dashboard"))
-
-    error         = None
-    form_username = ""
-
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "").strip()
-        form_username = username
-
-        if (username == config.ADMIN_USERNAME and
-                password == config.ADMIN_PASSWORD):
-            session.clear()
-            session["admin"]         = True
-            session["is_superadmin"] = True
-            session["username"]      = username
-            return redirect(url_for("superadmin_dashboard"))
-        else:
-            error = "Invalid superadmin credentials."
-
-    return render_template("superadmin_login.html",
-                           error=error, form_username=form_username)
-
 
 @app.route("/superadmin/logout")
 def superadmin_logout():
     session.clear()
-    return redirect(url_for("superadmin_login"))
+    return redirect(url_for("admin_login"))
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
@@ -859,22 +831,44 @@ def admin_register():
     form    = {}
 
     if request.method == "POST":
-        form = {
-            "username":  request.form.get("username", "").strip(),
-            "email":     request.form.get("email", "").strip(),
-            "company":   request.form.get("company", "").strip(),
-            "phone":     request.form.get("phone", "").strip(),
-        }
-        password         = request.form.get("password", "").strip()
-        confirm_password = request.form.get("confirm_password", "").strip()
-        try:
-            sub_days = int(request.form.get("subscription_days", 30))
-        except Exception:
-            sub_days = 30
+        # Check if it's a JSON request (from modal)
+        is_json = request.is_json or request.headers.get('Content-Type', '').startswith('application/json')
+
+        if is_json:
+            # Handle JSON request from modal
+            data = request.get_json()
+            form = {
+                "username":  data.get("username", "").strip(),
+                "email":     data.get("email", "").strip(),
+                "company":   data.get("company", "Admin Company").strip(),  # Default value
+                "phone":     data.get("phone", "").strip(),
+                "first_name": data.get("first_name", "").strip(),
+                "last_name": data.get("last_name", "").strip(),
+            }
+            password         = data.get("password", "").strip()
+            confirm_password = data.get("password", "").strip()  # For JSON, confirm is already validated on frontend
+            try:
+                sub_days = int(data.get("subscription_days", 30))
+            except Exception:
+                sub_days = 30
+        else:
+            # Handle form submission (backward compatibility)
+            form = {
+                "username":  request.form.get("username", "").strip(),
+                "email":     request.form.get("email", "").strip(),
+                "company":   request.form.get("company", "").strip(),
+                "phone":     request.form.get("phone", "").strip(),
+            }
+            password         = request.form.get("password", "").strip()
+            confirm_password = request.form.get("confirm_password", "").strip()
+            try:
+                sub_days = int(request.form.get("subscription_days", 30))
+            except Exception:
+                sub_days = 30
 
         # ── Validation ────────────────────────────────────────────────────────
-        if not all([form["username"], password, confirm_password, form["email"], form["company"]]):
-            error = "All fields are required."
+        if not all([form["username"], password, form["email"]]):
+            error = "Username, password, and email are required."
         elif len(form["username"]) < 3:
             error = "Username must be at least 3 characters."
         elif not re.match(r'^[a-zA-Z0-9_]+$', form["username"]):
@@ -904,6 +898,8 @@ def admin_register():
                     "email":              form["email"],
                     "company":            form["company"],
                     "phone":              form["phone"],
+                    "first_name":         form.get("first_name", ""),
+                    "last_name":          form.get("last_name", ""),
                     "subscription_days":  sub_days,
                     "subscription_start": today.isoformat(),
                     "subscription_end":   end_dt.isoformat(),
@@ -924,7 +920,21 @@ def admin_register():
                     users[new_id] = new_user
                     save_users(users)
                 success = "✅ Registration successful! Your account is active. You can now log in."
+
+                # If JSON request, return JSON response
+                if is_json:
+                    return jsonify({"success": True, "message": success})
+
                 form = {}
+
+        # If JSON request and there's an error, return JSON response
+        if is_json and error:
+            return jsonify({"success": False, "error": error}), 400
+
+        # If JSON request and success, return JSON response (already done above)
+        # If form submission or GET request, render template
+        if is_json:
+            return jsonify({"success": False, "error": error or "Unknown error"}), 400
 
     return render_template("admin_register.html",
                            error=error, success=success,

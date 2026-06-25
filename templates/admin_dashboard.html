@@ -4,27 +4,49 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard – Zayron Infotech Zayro Lens</title>
+
+  <!-- Bootstrap 5.3 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Flatpickr Calendar -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:      #07091a;
-      --surface: #0f1630;
-      --border:  rgba(245,158,11,0.1);
-      --blue:    #f59e0b;
-      --purple:  #fbbf24;
-      --green:   #22c55e;
-      --red:     #ef4444;
-      --amber:   #f59e0b;
-      --navy:    #1e3a8a;
-      --text:    #f1f5f9;
-      --muted:   #64748b;
+      --bg:         #07091a;
+      --surface:    #0f1630;
+      --blue-deep:  #0f1f5c;
+      --blue-mid:   #1d4ed8;
+      --blue-light: #3b82f6;
+      --blue-xl:    #60a5fa;
+      --blue-glow:  rgba(59,130,246,0.35);
+      --gold:       #f59e0b;
+      --gold-light: #fbbf24;
+      --gold-xl:    #fcd34d;
+      --gold-glow:  rgba(245,158,11,0.35);
+      --green:      #22c55e;
+      --green-light:#4ade80;
+      --red:        #ef4444;
+      --red-light:  #fca5a5;
+      --text:       #f1f5f9;
+      --muted:      #64748b;
+      --border:     rgba(59,130,246,0.15);
+      --shadow-sm:  0 1px 2px 0 rgba(0,0,0,0.1);
+      --shadow-md:  0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      --shadow-lg:  0 10px 15px -3px rgba(0,0,0,0.2), 0 4px 6px -2px rgba(0,0,0,0.1);
+      --shadow-xl:  0 20px 25px -5px rgba(0,0,0,0.3), 0 10px 10px -5px rgba(0,0,0,0.1);
     }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
       min-height: 100vh;
     }
 
@@ -32,12 +54,15 @@
     header {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
+      border-top: 3px solid;
+      border-image: linear-gradient(90deg, var(--blue-mid), var(--blue-light) 35%, var(--gold) 70%, var(--gold-light)) 1;
       padding: 0 32px;
       height: 60px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky; top: 0; z-index: 100;
+      box-shadow: var(--shadow-md);
     }
     .header-brand { display: flex; align-items: center; gap: 12px; }
     .header-brand .logo-wrap {
@@ -64,22 +89,39 @@
 
     /* Subscription bar */
     .sub-bar {
-      background: var(--card);
+      background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 9px 32px;
+      padding: 10px 32px;
       display: flex; align-items: center; justify-content: space-between;
-      font-size: .78rem;
+      font-size: 0.78rem;
       gap: 12px; flex-wrap: wrap;
+      box-shadow: var(--shadow-sm);
     }
     .sub-info { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
     .sub-chip {
       display: flex; align-items: center; gap: 6px;
-      padding: 4px 12px; border-radius: 20px;
-      font-size: .72rem; font-weight: 700;
+      padding: 5px 13px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 700;
+      transition: all 0.3s ease;
     }
-    .sub-chip-ok     { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.2); color:#22c55e; }
-    .sub-chip-warn   { background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.2); color:#f59e0b; }
-    .sub-chip-expire { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2); color:#ef4444; }
+    .sub-chip-ok {
+      background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(34,197,94,0.06));
+      border: 1px solid rgba(34,197,94,0.3);
+      color: var(--green-light);
+      box-shadow: 0 0 8px rgba(34,197,94,0.1);
+    }
+    .sub-chip-warn {
+      background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.06));
+      border: 1px solid rgba(245,158,11,0.3);
+      color: var(--gold-light);
+      box-shadow: 0 0 8px rgba(245,158,11,0.1);
+    }
+    .sub-chip-expire {
+      background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(239,68,68,0.06));
+      border: 1px solid rgba(239,68,68,0.3);
+      color: var(--red-light);
+      box-shadow: 0 0 8px rgba(239,68,68,0.1);
+    }
     .sub-text { color: var(--muted); }
     .sub-text strong { color: #cbd5e1; }
     .sub-days-number { color: #f59e0b; font-weight: 800; font-size: .88rem; }
@@ -113,13 +155,74 @@
       border-right: 1px solid var(--border);
     }
 
-    .section-title {
-      font-size: .7rem;
+    /* Feature Cards Enhancement */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-md);
+      animation: slideUp 0.6s ease-out backwards;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card:nth-child(1) { animation-delay: 0.5s; }
+    .feature-card:nth-child(2) { animation-delay: 0.6s; }
+    .feature-card:nth-child(3) { animation-delay: 0.7s; }
+    .feature-card:nth-child(4) { animation-delay: 0.8s; }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, var(--blue-glow) 0%, transparent 70%);
+      opacity: 0;
+      transition: all 0.4s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--blue-light);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg), 0 0 20px var(--blue-glow);
+    }
+
+    .feature-card:hover::before {
+      opacity: 0.5;
+    }
+
+    .feature-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      display: inline-block;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .feature-card:nth-child(2) .feature-icon { animation-delay: 0.5s; }
+    .feature-card:nth-child(3) .feature-icon { animation-delay: 1s; }
+    .feature-card:nth-child(4) .feature-icon { animation-delay: 1.5s; }
+
+    .feature-title {
+      font-size: 1rem;
       font-weight: 700;
-      letter-spacing: .1em;
-      text-transform: uppercase;
+      color: #f1f5f9;
+      margin-bottom: 6px;
+    }
+
+    .feature-description {
+      font-size: 0.8rem;
       color: var(--muted);
-      margin-bottom: 16px;
     }
 
     /* Create Event Form */
@@ -129,8 +232,20 @@
       border-radius: 16px;
       padding: 24px;
       margin-bottom: 32px;
+      box-shadow: var(--shadow-lg);
+      animation: fadeIn 0.6s ease-out;
     }
-    .form-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 20px; }
+    .form-card h2 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+      color: #f1f5f9;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     .form-row { margin-bottom: 16px; }
     .form-row label {
@@ -145,33 +260,54 @@
     .form-row input {
       width: 100%;
       padding: 11px 14px;
-      background: rgba(15,23,42,0.6);
-      border: 1px solid var(--border);
-      border-radius: 10px;
+      background: rgba(15,23,42,0.8);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
       color: var(--text);
       font-size: .9rem;
       outline: none;
-      transition: border-color .2s;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-sm), inset 0 1px 3px rgba(0,0,0,0.1);
     }
-    .form-row input:focus { border-color: var(--blue); }
+    .form-row input:focus {
+      border-color: var(--blue-light);
+      background: rgba(15,23,42,0.95);
+      box-shadow: var(--shadow-md), 0 0 0 4px var(--blue-glow);
+      transform: translateY(-1px);
+    }
     .form-row input::placeholder { color: #334155; }
 
     .submit-btn {
       width: 100%;
       padding: 12px;
-      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
+      background: linear-gradient(135deg, var(--blue-deep) 0%, var(--blue-mid) 45%, #0369a1 70%, var(--gold) 100%);
       border: none;
-      border-radius: 10px;
-      color: #0a0e1f;
-      font-size: .95rem;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 0.95rem;
       font-weight: 700;
       cursor: pointer;
-      transition: opacity .2s, transform .1s;
+      letter-spacing: 0.03em;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: var(--shadow-lg), 0 10px 30px rgba(29,78,216,0.35);
       margin-top: 4px;
+      position: relative;
+      overflow: hidden;
     }
-    .submit-btn:hover   { opacity: .88; }
-    .submit-btn:active  { transform: scale(.98); }
-    .submit-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%; width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+      transition: left 0.5s ease;
+    }
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-xl), 0 15px 40px rgba(29,78,216,0.45), 0 5px 20px var(--gold-glow);
+    }
+    .submit-btn:hover::before { left: 100%; }
+    .submit-btn:active { transform: translateY(0); box-shadow: var(--shadow-md); }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* Events list */
     .events-list { display: flex; flex-direction: column; gap: 12px; }
@@ -184,10 +320,20 @@
       align-items: center;
       gap: 14px;
       cursor: pointer;
-      transition: border-color .2s, background .2s;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-sm);
     }
-    .event-item:hover { border-color: rgba(59,130,246,.3); background: #1a2640; }
-    .event-item.active { border-color: var(--blue); background: rgba(59,130,246,.06); }
+    .event-item:hover {
+      border-color: var(--blue-light);
+      background: rgba(59,130,246,0.08);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    .event-item.active {
+      border-color: var(--blue-light);
+      background: rgba(59,130,246,0.15);
+      box-shadow: var(--shadow-md), 0 0 0 4px var(--blue-glow);
+    }
 
     .event-icon {
       width: 40px; height: 40px; min-width: 40px;
@@ -201,16 +347,37 @@
     .event-meta { font-size: .75rem; color: var(--muted); margin-top: 2px; }
 
     .badge {
-      padding: 3px 9px;
+      padding: 4px 11px;
       border-radius: 20px;
-      font-size: .7rem;
+      font-size: 0.7rem;
       font-weight: 700;
-      letter-spacing: .03em;
+      letter-spacing: 0.05em;
+      transition: all 0.3s ease;
     }
-    .badge-green  { background: rgba(34,197,94,.15);  color: #4ade80; }
-    .badge-amber  { background: rgba(245,158,11,.15); color: #fcd34d; }
-    .badge-red    { background: rgba(239,68,68,.15);  color: #fca5a5; }
-    .badge-blue   { background: rgba(59,130,246,.15); color: #93c5fd; }
+    .badge-green {
+      background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.08));
+      color: var(--green-light);
+      border: 1px solid rgba(34,197,94,0.3);
+      box-shadow: 0 0 8px rgba(34,197,94,0.15);
+    }
+    .badge-amber {
+      background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.08));
+      color: var(--gold-xl);
+      border: 1px solid rgba(245,158,11,0.3);
+      box-shadow: 0 0 8px rgba(245,158,11,0.15);
+    }
+    .badge-red {
+      background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.08));
+      color: var(--red-light);
+      border: 1px solid rgba(239,68,68,0.3);
+      box-shadow: 0 0 8px rgba(239,68,68,0.15);
+    }
+    .badge-blue {
+      background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.08));
+      color: var(--blue-xl);
+      border: 1px solid rgba(59,130,246,0.3);
+      box-shadow: 0 0 8px rgba(59,130,246,0.15);
+    }
 
     .empty-state {
       text-align: center;
@@ -219,6 +386,36 @@
       font-size: .85rem;
     }
     .empty-state .ei { font-size: 40px; margin-bottom: 10px; }
+
+    /* Enhanced Stat Cards */
+    .stat-card {
+      animation: slideUp 0.6s ease-out backwards;
+    }
+    .stat-card:nth-child(1) { animation-delay: 0.1s; }
+    .stat-card:nth-child(2) { animation-delay: 0.2s; }
+    .stat-card:nth-child(3) { animation-delay: 0.3s; }
+
+    .stat-value {
+      animation: scaleIn 0.6s ease-out backwards;
+      animation-delay: 0.4s;
+    }
+
+    /* Section title enhancement */
+    .section-title {
+      position: relative;
+      padding-left: 12px;
+    }
+    .section-title::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 14px;
+      background: linear-gradient(180deg, var(--blue-light), var(--gold));
+      border-radius: 2px;
+    }
 
     /* ── Right panel – QR area ───────────────── */
     .right-panel {
@@ -230,7 +427,7 @@
 
     .qr-placeholder {
       background: var(--surface);
-      border: 2px dashed rgba(255,255,255,0.08);
+      border: 2px dashed rgba(59,130,246,0.2);
       border-radius: 20px;
       display: flex;
       flex-direction: column;
@@ -241,9 +438,15 @@
       color: var(--muted);
       text-align: center;
       padding: 24px;
-      transition: border-color .3s;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-md);
     }
-    .qr-placeholder.has-qr { border-style: solid; border-color: rgba(59,130,246,.3); }
+    .qr-placeholder:hover { border-color: var(--blue-light); }
+    .qr-placeholder.has-qr {
+      border-style: solid;
+      border-color: var(--blue-light);
+      box-shadow: var(--shadow-lg), 0 0 0 2px rgba(59,130,246,0.1);
+    }
     .qr-placeholder .ph-icon { font-size: 56px; opacity: .4; }
     .qr-placeholder p { font-size: .85rem; max-width: 200px; line-height: 1.5; }
 
@@ -273,57 +476,108 @@
       display: block;
       width: 100%;
       padding: 11px;
-      border-radius: 10px;
-      font-size: .88rem;
+      border-radius: 12px;
+      font-size: 0.88rem;
       font-weight: 600;
       text-align: center;
       text-decoration: none;
       cursor: pointer;
       border: none;
-      transition: opacity .2s, transform .1s;
+      transition: all 0.3s ease;
     }
-    .qr-actions a:active, .qr-actions button:active { transform: scale(.98); }
+    .qr-actions a:active, .qr-actions button:active { transform: scale(0.98); }
 
     .btn-download {
-      background: linear-gradient(135deg, #b45309, #f59e0b, #fbbf24);
-      color: #0a0e1f;
+      background: linear-gradient(135deg, var(--blue-deep) 0%, var(--blue-mid) 45%, #0369a1 70%, var(--gold) 100%);
+      color: #fff;
+      box-shadow: var(--shadow-md);
     }
+    .btn-download:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg), 0 10px 25px rgba(29,78,216,0.3);
+    }
+
     .btn-print {
-      background: rgba(59,130,246,.15);
-      border: 1px solid rgba(59,130,246,.35) !important;
-      color: #93c5fd;
+      background: rgba(59,130,246,0.12);
+      border: 1.5px solid rgba(59,130,246,0.35) !important;
+      color: var(--blue-xl);
+      box-shadow: var(--shadow-sm);
     }
-    .btn-print:hover { background: rgba(59,130,246,.25); }
+    .btn-print:hover {
+      background: rgba(59,130,246,0.2);
+      border-color: var(--blue-light) !important;
+      box-shadow: var(--shadow-md);
+    }
+
     .btn-copy {
-      background: rgba(255,255,255,.06);
-      border: 1px solid var(--border) !important;
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid var(--border) !important;
       color: var(--text);
+      box-shadow: var(--shadow-sm);
     }
-    .btn-copy:hover { background: rgba(255,255,255,.1); }
+    .btn-copy:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(59,130,246,0.4) !important;
+      box-shadow: var(--shadow-md);
+    }
 
     .status-bar {
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: 1.5px solid var(--border);
       border-radius: 12px;
       padding: 14px 16px;
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: .82rem;
+      font-size: 0.82rem;
+      box-shadow: var(--shadow-md);
+      animation: slideUp 0.6s ease-out;
     }
     .status-bar .spin {
       width: 24px; height: 24px;
-      border: 3px solid rgba(245,158,11,.2);
-      border-top-color: var(--blue);
-      border-right-color: #fbbf24;
+      border: 3px solid rgba(59,130,246,0.2);
+      border-top-color: var(--blue-light);
+      border-right-color: var(--gold);
       border-radius: 50%;
-      animation: spin .7s linear infinite;
+      animation: spin 0.8s linear infinite;
       flex-shrink: 0;
+      box-shadow: 0 0 8px var(--blue-glow);
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
     @keyframes slideRight { 0% { width: 0%; } 100% { width: 65%; } }
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 10px rgba(59,130,246,0.3); }
+      50% { box-shadow: 0 0 20px rgba(59,130,246,0.6); }
+    }
 
     /* Page Loader */
     .page-loader {
@@ -332,24 +586,28 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(7, 9, 26, 0.95);
+      background: rgba(7, 9, 26, 0.98);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 9999;
-      backdrop-filter: blur(2px);
+      backdrop-filter: blur(4px);
     }
     .page-loader.hidden {
       display: none;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s ease;
     }
     .loader-spinner {
       width: 64px;
       height: 64px;
-      border: 5px solid rgba(245, 158, 11, 0.2);
-      border-top: 5px solid #f59e0b;
-      border-right: 5px solid #fbbf24;
+      border: 5px solid rgba(59,130,246,0.2);
+      border-top: 5px solid var(--blue-light);
+      border-right: 5px solid var(--gold);
       border-radius: 50%;
       animation: spin 1s linear infinite;
+      box-shadow: 0 0 20px var(--blue-glow);
     }
     .status-msg { flex: 1; color: #fbbf24; font-weight: 600; font-size: 0.95rem; }
     .status-count { color: var(--blue); font-weight: 600; }
@@ -357,30 +615,43 @@
     /* Tabs */
     .tab-row { display: flex; gap: 8px; }
     .tab-btn {
-      flex: 1; padding: 8px 12px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      flex: 1; padding: 10px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
       color: var(--muted);
-      font-size: .82rem; font-weight: 600;
-      cursor: pointer; transition: all .2s;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-sm);
+    }
+    .tab-btn:hover {
+      background: rgba(59,130,246,0.08);
+      border-color: rgba(59,130,246,0.3);
     }
     .tab-btn.active {
-      background: rgba(59,130,246,.15);
-      border-color: rgba(59,130,246,.4);
-      color: #93c5fd;
+      background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.08));
+      border-color: var(--blue-light);
+      color: var(--blue-xl);
+      box-shadow: var(--shadow-md), 0 0 0 2px var(--blue-glow);
     }
 
     /* File drop zone */
     .file-drop {
-      border: 2px dashed rgba(255,255,255,.1);
-      border-radius: 10px;
+      border: 2px dashed rgba(59,130,246,0.2);
+      border-radius: 12px;
       padding: 22px 16px;
       text-align: center;
       cursor: pointer;
-      transition: all .2s;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-sm);
     }
-    .file-drop:hover { border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.04); }
+    .file-drop:hover {
+      border-color: var(--blue-light);
+      background: rgba(59,130,246,0.05);
+      box-shadow: var(--shadow-md);
+    }
     .fd-icon { font-size: 28px; margin-bottom: 6px; }
     .fd-text { font-size: .85rem; font-weight: 600; color: #94a3b8; }
     .fd-sub  { font-size: .73rem; color: var(--muted); margin-top: 3px; }
@@ -406,19 +677,30 @@
     .toast {
       position: fixed;
       bottom: 28px; right: 28px;
-      background: #1e293b;
-      border: 1px solid rgba(255,255,255,.1);
+      background: linear-gradient(135deg, #1e293b 0%, #0f1f3f 100%);
+      border: 1.5px solid rgba(59,130,246,0.2);
       border-radius: 12px;
-      padding: 12px 20px;
-      font-size: .85rem;
+      padding: 14px 20px;
+      font-size: 0.85rem;
       color: var(--text);
-      box-shadow: 0 8px 30px rgba(0,0,0,.4);
+      box-shadow: var(--shadow-lg), 0 0 20px var(--blue-glow);
       transform: translateY(20px);
       opacity: 0;
-      transition: all .3s;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
       z-index: 999;
     }
-    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .toast.success {
+      border-color: rgba(34,197,94,0.3);
+      box-shadow: var(--shadow-lg), 0 0 20px rgba(34,197,94,0.25);
+    }
+    .toast.error {
+      border-color: rgba(239,68,68,0.3);
+      box-shadow: var(--shadow-lg), 0 0 20px rgba(239,68,68,0.25);
+    }
 
     /* ── Browse Photos Gallery ─────────────── */
     .browse-toolbar {
@@ -431,37 +713,75 @@
     }
     .browse-count strong { color: #f59e0b; font-size: .95rem; }
     .per-page-select {
-      background: rgba(15,23,42,.8);
-      border: 1px solid var(--border);
-      color: var(--text);
+      background: linear-gradient(135deg, rgba(59,130,246,.2), rgba(59,130,246,.1));
+      border: 1.5px solid rgba(59,130,246,.3);
+      color: #ffffff;
       border-radius: 8px;
-      padding: 5px 10px;
-      font-size: .8rem;
+      padding: 8px 14px;
+      font-size: .9rem;
+      font-weight: 700;
       cursor: pointer;
       outline: none;
+      transition: all 0.2s ease;
+    }
+    .per-page-select:hover {
+      background: linear-gradient(135deg, rgba(59,130,246,.35), rgba(59,130,246,.25));
+      border-color: rgba(59,130,246,.5);
+      box-shadow: 0 4px 12px rgba(59,130,246,0.2);
+    }
+    .per-page-select:focus {
+      background: linear-gradient(135deg, rgba(59,130,246,.4), rgba(59,130,246,.3));
+      border-color: rgba(59,130,246,.6);
+      box-shadow: 0 0 20px rgba(59,130,246,0.3);
+    }
+    .per-page-select option {
+      background: #0f1630;
+      color: #ffffff;
+      padding: 8px;
+      border: none;
+    }
+    .per-page-select option:hover {
+      background: #1d4ed8;
+      color: #ffffff;
+    }
+    .per-page-select option:checked {
+      background: linear-gradient(#3b82f6, #3b82f6);
+      color: #ffffff;
     }
     .photo-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 16px;
       margin-bottom: 16px;
+      animation: slideUp 0.6s ease-out 0.1s both;
     }
     .photo-thumb-card {
       position: relative;
-      border-radius: 8px;
+      border-radius: 12px;
       overflow: hidden;
-      background: rgba(255,255,255,.04);
-      border: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(59,130,246,.08), rgba(59,130,246,.04));
+      border: 1.5px solid rgba(59,130,246,.2);
       aspect-ratio: 4/3;
-      height: 280px;
+      height: auto;
+      min-height: 200px;
       cursor: pointer;
-      transition: border-color .2s, transform .15s;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      animation: slideUp 0.5s ease-out backwards;
     }
-    .photo-thumb-card:hover { border-color: #f59e0b; transform: scale(1.03); }
+    .photo-thumb-card:nth-child(1) { animation-delay: 0.3s; }
+    .photo-thumb-card:nth-child(2) { animation-delay: 0.35s; }
+    .photo-thumb-card:nth-child(3) { animation-delay: 0.4s; }
+    .photo-thumb-card:nth-child(4) { animation-delay: 0.45s; }
+    .photo-thumb-card:hover {
+      border-color: var(--blue-light);
+      transform: scale(1.05) translateY(-4px);
+      box-shadow: 0 12px 24px rgba(59,130,246,0.3), 0 0 0 2px var(--blue-glow);
+    }
     .photo-thumb-card img {
       width: 100%; height: 100%;
       object-fit: cover; display: block;
-      opacity: 0; transition: opacity .3s ease;
+      opacity: 0; transition: opacity .4s ease;
     }
     .photo-thumb-card img.loaded { opacity: 1; }
     /* Remove button on each card */
@@ -508,27 +828,42 @@
       100% { background-position: -200% 0; }
     }
     .pagination-bar {
-      display: flex; gap: 6px;
+      display: flex; gap: 8px;
       justify-content: center; flex-wrap: wrap;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
+      margin-top: 20px;
+      animation: slideUp 0.6s ease-out 0.2s both;
     }
     .page-btn {
-      min-width: 32px; height: 32px; padding: 0 8px;
-      border-radius: 7px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,.04);
-      color: var(--muted);
-      font-size: .8rem; font-weight: 600;
-      cursor: pointer; transition: all .15s;
+      min-width: 40px; height: 40px; padding: 0 10px;
+      border-radius: 8px;
+      border: 1.5px solid rgba(245,158,11,.2);
+      background: linear-gradient(135deg, rgba(245,158,11,.08), rgba(245,158,11,.04));
+      color: #cbd5e1;
+      font-size: .9rem; font-weight: 700;
+      cursor: pointer; transition: all 0.2s ease;
       display: flex; align-items: center; justify-content: center;
     }
-    .page-btn:hover { border-color: #f59e0b; color: #f59e0b; }
-    .page-btn.active {
-      background: rgba(245,158,11,.2);
-      border-color: #f59e0b;
+    .page-btn:hover {
+      border-color: rgba(245,158,11,.5);
       color: #fbbf24;
+      background: linear-gradient(135deg, rgba(245,158,11,.15), rgba(245,158,11,.1));
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(245,158,11,0.2);
     }
-    .page-btn:disabled { opacity: .3; cursor: not-allowed; }
+    .page-btn.active {
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+      border-color: #fbbf24;
+      color: #0a0e1f;
+      font-weight: 800;
+      box-shadow: 0 6px 16px rgba(245,158,11,0.3);
+      transform: translateY(-2px);
+    }
+    .page-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+    }
     .browse-actions { display: flex; gap: 10px; margin-bottom: 6px; }
     .browse-actions button {
       flex: 1; padding: 10px; border-radius: 9px;
@@ -649,6 +984,139 @@
         transform: scale(1.1);
         opacity: 1;
       }
+    }
+
+    /* ── Flatpickr Calendar Customization ────────────── */
+    .flatpickr-calendar {
+      background: linear-gradient(135deg, #0f1f5c 0%, #1a2f7a 100%) !important;
+      border: 2px solid rgba(59,130,246,.3) !important;
+      border-radius: 12px !important;
+      box-shadow: 0 20px 50px rgba(0,0,0,.5), 0 0 40px rgba(59,130,246,.2) !important;
+    }
+
+    .flatpickr-months {
+      padding: 14px !important;
+      background: rgba(59,130,246,.1) !important;
+    }
+
+    .flatpickr-month {
+      color: #ffffff !important;
+      font-weight: 700 !important;
+    }
+
+    .flatpickr-current-month {
+      color: #cbd5e1 !important;
+    }
+
+    .flatpickr-current-month input {
+      color: #ffffff !important;
+      background: rgba(59,130,246,.1) !important;
+      border: 1px solid rgba(59,130,246,.2) !important;
+      border-radius: 6px !important;
+      padding: 4px 8px !important;
+    }
+
+    .numInputWrapper span.arrowUp::after,
+    .numInputWrapper span.arrowDown::after {
+      border-top-color: #60a5fa !important;
+      border-bottom-color: #60a5fa !important;
+    }
+
+    .flatpickr-prev,
+    .flatpickr-next {
+      color: #60a5fa !important;
+      fill: #60a5fa !important;
+    }
+
+    .flatpickr-prev:hover,
+    .flatpickr-next:hover {
+      color: #3b82f6 !important;
+      fill: #3b82f6 !important;
+    }
+
+    .dayContainer {
+      padding: 8px 0 !important;
+    }
+
+    .flatpickr-day {
+      color: #cbd5e1 !important;
+      border-radius: 6px !important;
+      margin: 3px !important;
+      transition: all 0.2s ease !important;
+    }
+
+    .flatpickr-day:hover {
+      background: rgba(59,130,246,.2) !important;
+      color: #60a5fa !important;
+      border-color: rgba(59,130,246,.3) !important;
+    }
+
+    .flatpickr-day.selected {
+      background: linear-gradient(135deg, #3b82f6, #60a5fa) !important;
+      border-color: #60a5fa !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      box-shadow: 0 4px 12px rgba(59,130,246,.3) !important;
+    }
+
+    .flatpickr-day.selected:hover {
+      background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+      box-shadow: 0 6px 16px rgba(59,130,246,.4) !important;
+    }
+
+    .flatpickr-day.today {
+      border-color: #f59e0b !important;
+      background: rgba(245,158,11,.1) !important;
+      color: #fbbf24 !important;
+      font-weight: 600 !important;
+    }
+
+    .flatpickr-day.inRange {
+      background: rgba(59,130,246,.15) !important;
+      color: #cbd5e1 !important;
+    }
+
+    .flatpickr-day.disabled,
+    .flatpickr-day.prevMonthDay,
+    .flatpickr-day.nextMonthDay {
+      color: rgba(203,213,225,.3) !important;
+    }
+
+    .flatpickr-weekdays {
+      background: rgba(59,130,246,.08) !important;
+      color: #60a5fa !important;
+      font-weight: 700 !important;
+    }
+
+    .flatpickr-weekday {
+      color: #60a5fa !important;
+      background: transparent !important;
+    }
+
+    .flatpickr-time {
+      background: rgba(59,130,246,.05) !important;
+      border-top: 1px solid rgba(59,130,246,.2) !important;
+    }
+
+    .flatpickr-time input {
+      background: rgba(59,130,246,.1) !important;
+      color: #cbd5e1 !important;
+      border: 1px solid rgba(59,130,246,.2) !important;
+      border-radius: 4px !important;
+    }
+
+    .flatpickr-time input:focus {
+      background: rgba(59,130,246,.15) !important;
+      border-color: rgba(59,130,246,.4) !important;
+      color: #ffffff !important;
+    }
+
+    .flatpickr-separator {
+      color: #60a5fa !important;
+    }
+
+    .flatpickr-am-pm {
+      color: #60a5fa !important;
     }
   </style>
 </head>
@@ -773,35 +1241,51 @@
           </button>
         </div>
 
-        <!-- Events Dashboard Panel -->
-        <div id="eventsDashboardPanel" style="display:none; border: 2px solid rgba(59,130,246,.3); border-radius: 12px; padding: 20px; margin-bottom: 24px; background: rgba(59,130,246,.02);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: #ffffff;">📋 All Events</h3>
-            <button onclick="toggleEventsDashboard()" style="background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 1.4rem; opacity: 0.8; hover: opacity 1;">✕</button>
-          </div>
-          <div style="margin-bottom: 12px;">
-            <input type="text" id="dashboardSearch" placeholder="Search events..."
-              style="width: 100%; padding: 10px 12px; font-size: .9rem; border-radius: 6px; border: 1.5px solid rgba(59,130,246,.3); background: rgba(59,130,246,.08); color: #f1f5f9;">
-          </div>
-          <div id="dashboardEventsList" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
-            <div style="color: var(--muted); font-size: .85rem; text-align: center; padding: 20px 12px;">
-              Loading events...
+        <!-- Events Dashboard Panel - Enhanced Modal -->
+        <div id="eventsDashboardOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(5,9,15,0.85); backdrop-filter: blur(8px); z-index: 5000; animation: fadeIn 0.3s ease-out; align-items: center; justify-content: center;">
+          <div id="eventsDashboardPanel" style="position: relative; width: 90%; max-width: 600px; max-height: 80vh; background: linear-gradient(135deg, rgba(15,31,92,0.95), rgba(8,13,25,0.95)); border: 2px solid rgba(59,130,246,.4); border-radius: 16px; padding: 0; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 40px rgba(59,130,246,0.2); animation: scaleIn 0.3s ease-out;">
+
+            <!-- Modal Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 24px; border-bottom: 1px solid rgba(59,130,246,.2); background: linear-gradient(135deg, rgba(59,130,246,0.1), transparent);">
+              <div>
+                <h3 style="margin: 0 0 4px 0; font-size: 1.4rem; font-weight: 800; color: #ffffff;">📋 All Events</h3>
+                <p style="margin: 0; font-size: .85rem; color: rgba(203,213,225,0.7);">Manage and organize your events</p>
+              </div>
+              <button onclick="toggleEventsDashboard()" style="background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; cursor: pointer; font-size: 1.6rem; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 4px 12px rgba(239,68,68,0.3);" onmouseover="this.style.background='linear-gradient(135deg, #dc2626, #b91c1c)'; this.style.transform='scale(1.1)';" onmouseout="this.style.background='linear-gradient(135deg, #ef4444, #dc2626)'; this.style.transform='scale(1)';">✕</button>
+            </div>
+
+            <!-- Search Bar -->
+            <div style="padding: 16px 24px; border-bottom: 1px solid rgba(59,130,246,.1); background: rgba(59,130,246,0.05);">
+              <input type="text" id="dashboardSearch" placeholder="🔍 Search events by name..."
+                style="width: 100%; padding: 12px 16px; font-size: .95rem; border-radius: 10px; border: 2px solid rgba(59,130,246,.2); background: rgba(59,130,246,.08); color: #f1f5f9; transition: all 0.2s;" onmouseover="this.style.borderColor='rgba(59,130,246,.4); this.style.background='rgba(59,130,246,.12)'" onmouseout="this.style.borderColor='rgba(59,130,246,.2)'; this.style.background='rgba(59,130,246,.08)'">
+            </div>
+
+            <!-- Events List -->
+            <div id="dashboardEventsList" style="flex: 1; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 12px;">
+              <div style="color: rgba(203,213,225,0.6); font-size: .85rem; text-align: center; padding: 32px 12px;">
+                ⏳ Loading events...
+              </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="padding: 16px 24px; border-top: 1px solid rgba(59,130,246,.1); background: linear-gradient(135deg, transparent, rgba(59,130,246,0.05)); text-align: right;">
+              <button onclick="toggleEventsDashboard()" style="padding: 10px 24px; background: rgba(59,130,246,.1); border: 2px solid rgba(59,130,246,.2); color: #60a5fa; border-radius: 8px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,.2)'; this.style.borderColor='rgba(59,130,246,.4)'" onmouseout="this.style.background='rgba(59,130,246,.1)'; this.style.borderColor='rgba(59,130,246,.2)'">Close Panel</button>
             </div>
           </div>
         </div>
 
         <!-- Stats Overview (3 columns) -->
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 28px;">
-          <div style="border: 2px solid rgba(34,197,94,.4); border-radius: 10px; padding: 18px; text-align: center; background: rgba(34,197,94,.05);">
-            <div style="font-size: 2.2rem; font-weight: 800; color: #22c55e; margin-bottom: 6px;" id="statsEvents">0</div>
+          <div class="stat-card" style="border: 2px solid rgba(34,197,94,.4); border-radius: 10px; padding: 18px; text-align: center; background: rgba(34,197,94,.05);">
+            <div class="stat-value" style="font-size: 2.2rem; font-weight: 800; color: #22c55e; margin-bottom: 6px;" id="statsEvents">0</div>
             <div style="font-size: .9rem; color: #cbd5e1;">Total Events</div>
           </div>
-          <div style="border: 2px solid rgba(59,130,246,.4); border-radius: 10px; padding: 18px; text-align: center; background: rgba(59,130,246,.05);">
-            <div style="font-size: 2.2rem; font-weight: 800; color: #3b82f6; margin-bottom: 6px;" id="statsPhotos">0</div>
+          <div class="stat-card" style="border: 2px solid rgba(59,130,246,.4); border-radius: 10px; padding: 18px; text-align: center; background: rgba(59,130,246,.05);">
+            <div class="stat-value" style="font-size: 2.2rem; font-weight: 800; color: #3b82f6; margin-bottom: 6px;" id="statsPhotos">0</div>
             <div style="font-size: .9rem; color: #cbd5e1;">Total Photos</div>
           </div>
-          <div style="border: 2px solid rgba(245,158,11,.4); border-radius: 10px; padding: 18px; text-align: center; background: rgba(245,158,11,.05);">
-            <div style="font-size: 2.2rem; font-weight: 800; color: #f59e0b; margin-bottom: 6px;">⚡</div>
+          <div class="stat-card" style="border: 2px solid rgba(245,158,11,.4); border-radius: 10px; padding: 18px; text-align: center; background: rgba(245,158,11,.05);">
+            <div class="stat-value" style="font-size: 2.2rem; font-weight: 800; color: #f59e0b; margin-bottom: 6px;">⚡</div>
             <div style="font-size: .9rem; color: #cbd5e1;">AI Ready</div>
           </div>
         </div>
@@ -809,26 +1293,26 @@
         <!-- Feature Cards -->
         <div style="margin-bottom: 28px;">
           <p class="section-title" style="font-size: 1.1rem; font-weight: 700; margin-bottom: 14px;">✨ Features</p>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div style="border: 2px solid rgba(59,130,246,.6); border-radius: 8px; padding: 16px; background: rgba(59,130,246,.12);">
-              <div style="font-size: 1.3rem; margin-bottom: 6px;">🤖</div>
-              <div style="font-weight: 700; margin-bottom: 4px; color: #60a5fa;">Face Recognition</div>
-              <div style="font-size: .85rem; color: #cbd5e1;">AI-powered photo matching</div>
+          <div class="features-grid">
+            <div class="feature-card" style="border: 2px solid rgba(59,130,246,.6); border-radius: 8px; padding: 16px; background: rgba(59,130,246,.12);">
+              <div class="feature-icon" style="font-size: 1.3rem; margin-bottom: 6px;">🤖</div>
+              <div class="feature-title" style="font-weight: 700; margin-bottom: 4px; color: #60a5fa;">Face Recognition</div>
+              <div class="feature-description" style="font-size: .85rem; color: #cbd5e1;">AI-powered photo matching</div>
             </div>
-            <div style="border: 2px solid rgba(168,85,247,.6); border-radius: 8px; padding: 16px; background: rgba(168,85,247,.12);">
-              <div style="font-size: 1.3rem; margin-bottom: 6px;">🎁</div>
-              <div style="font-weight: 700; margin-bottom: 4px; color: #d8b4fe;">Event Management</div>
-              <div style="font-size: .85rem; color: #cbd5e1;">Organize by event & date</div>
+            <div class="feature-card" style="border: 2px solid rgba(168,85,247,.6); border-radius: 8px; padding: 16px; background: rgba(168,85,247,.12);">
+              <div class="feature-icon" style="font-size: 1.3rem; margin-bottom: 6px;">🎁</div>
+              <div class="feature-title" style="font-weight: 700; margin-bottom: 4px; color: #d8b4fe;">Event Management</div>
+              <div class="feature-description" style="font-size: .85rem; color: #cbd5e1;">Organize by event & date</div>
             </div>
-            <div style="border: 2px solid rgba(34,197,94,.6); border-radius: 8px; padding: 16px; background: rgba(34,197,94,.12);">
-              <div style="font-size: 1.3rem; margin-bottom: 6px;">📊</div>
-              <div style="font-weight: 700; margin-bottom: 4px; color: #86efac;">QR Sharing</div>
-              <div style="font-size: .85rem; color: #cbd5e1;">Generate & share QR codes</div>
+            <div class="feature-card" style="border: 2px solid rgba(34,197,94,.6); border-radius: 8px; padding: 16px; background: rgba(34,197,94,.12);">
+              <div class="feature-icon" style="font-size: 1.3rem; margin-bottom: 6px;">📊</div>
+              <div class="feature-title" style="font-weight: 700; margin-bottom: 4px; color: #86efac;">QR Sharing</div>
+              <div class="feature-description" style="font-size: .85rem; color: #cbd5e1;">Generate & share QR codes</div>
             </div>
-            <div style="border: 2px solid rgba(245,158,11,.6); border-radius: 8px; padding: 16px; background: rgba(245,158,11,.12);">
-              <div style="font-size: 1.3rem; margin-bottom: 6px;">⬇️</div>
-              <div style="font-weight: 700; margin-bottom: 4px; color: #fcd34d;">Quick Download</div>
-              <div style="font-size: .85rem; color: #cbd5e1;">ZIP export & email sharing</div>
+            <div class="feature-card" style="border: 2px solid rgba(245,158,11,.6); border-radius: 8px; padding: 16px; background: rgba(245,158,11,.12);">
+              <div class="feature-icon" style="font-size: 1.3rem; margin-bottom: 6px;">⬇️</div>
+              <div class="feature-title" style="font-weight: 700; margin-bottom: 4px; color: #fcd34d;">Quick Download</div>
+              <div class="feature-description" style="font-size: .85rem; color: #cbd5e1;">ZIP export & email sharing</div>
             </div>
           </div>
         </div>
@@ -872,44 +1356,93 @@
 
       <!-- Browse Photos tab - Hidden for simplified single-page -->
       <div id="browseTab" style="display:none !important; margin-top:16px;">
-        <div class="form-row">
-          <label>Event Name</label>
-          <input type="text" id="browseEventName" placeholder="e.g. Annual Day 2024" maxlength="80">
+
+        <!-- Event Name Field -->
+        <div class="form-row" style="margin-bottom: 20px; animation: slideUp 0.5s ease-out 0.1s both;">
+          <label style="display: block; font-size: .85rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+            📝 Event Name
+          </label>
+          <input type="text" id="browseEventName" placeholder="e.g. Annual Day 2024" maxlength="80"
+            style="width: 100%; padding: 12px 16px; border: 2px solid rgba(59,130,246,.2); border-radius: 10px; font-size: .95rem; background: rgba(59,130,246,.08); color: #f1f5f9; transition: all 0.3s ease; font-family: 'Inter', sans-serif;"
+            onfocus="this.style.borderColor='rgba(59,130,246,.5)'; this.style.background='rgba(59,130,246,.12)'; this.style.boxShadow='0 0 20px rgba(59,130,246,0.2)'"
+            onblur="this.style.borderColor='rgba(59,130,246,.2)'; this.style.background='rgba(59,130,246,.08)'; this.style.boxShadow='none'">
         </div>
 
         <!-- Date Range Fields -->
-        <div class="form-row" style="display:flex; gap:14px;">
-          <div style="flex:1;">
-            <label>From Date</label>
-            <input type="date" id="browseFromDate" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-size:.9rem; background:#1e3a8a; color:#fff;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+          <!-- From Date -->
+          <div class="form-row" style="animation: slideUp 0.5s ease-out 0.2s both;">
+            <label style="display: block; font-size: .85rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+              📅 From Date
+            </label>
+            <div style="position: relative; display: flex; align-items: center;">
+              <input type="date" id="browseFromDate"
+                style="width: 100%; padding: 12px 16px 12px 12px; padding-right: 48px; border: 2px solid rgba(34,197,94,.2); border-radius: 10px; font-size: .95rem; background: rgba(34,197,94,.08); color: #f1f5f9; transition: all 0.3s ease; font-family: 'Inter', sans-serif; cursor: pointer;"
+                onfocus="this.style.borderColor='rgba(34,197,94,.5)'; this.style.background='rgba(34,197,94,.12)'; this.style.boxShadow='0 0 20px rgba(34,197,94,0.2)'"
+                onblur="this.style.borderColor='rgba(34,197,94,.2)'; this.style.background='rgba(34,197,94,.08)'; this.style.boxShadow='none'">
+              <button type="button" onclick="document.getElementById('browseFromDate').click()"
+                style="position: absolute; right: 8px; background: linear-gradient(135deg, rgba(34,197,94,.3), rgba(34,197,94,.1)); border: 1.5px solid rgba(34,197,94,.3); color: #4ade80; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s;"
+                onmouseover="this.style.background='linear-gradient(135deg, rgba(34,197,94,.4), rgba(34,197,94,.2))'; this.style.borderColor='rgba(34,197,94,.5)'; this.style.transform='scale(1.1)'"
+                onmouseout="this.style.background='linear-gradient(135deg, rgba(34,197,94,.3), rgba(34,197,94,.1))'; this.style.borderColor='rgba(34,197,94,.3)'; this.style.transform='scale(1)'">📆</button>
+            </div>
           </div>
-          <div style="flex:1;">
-            <label>To Date</label>
-            <input type="date" id="browseToDate" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-size:.9rem; background:#1e3a8a; color:#fff;">
+
+          <!-- To Date -->
+          <div class="form-row" style="animation: slideUp 0.5s ease-out 0.3s both;">
+            <label style="display: block; font-size: .85rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+              📅 To Date
+            </label>
+            <div style="position: relative; display: flex; align-items: center;">
+              <input type="date" id="browseToDate"
+                style="width: 100%; padding: 12px 16px 12px 12px; padding-right: 48px; border: 2px solid rgba(245,158,11,.2); border-radius: 10px; font-size: .95rem; background: rgba(245,158,11,.08); color: #f1f5f9; transition: all 0.3s ease; font-family: 'Inter', sans-serif; cursor: pointer;"
+                onfocus="this.style.borderColor='rgba(245,158,11,.5)'; this.style.background='rgba(245,158,11,.12)'; this.style.boxShadow='0 0 20px rgba(245,158,11,0.2)'"
+                onblur="this.style.borderColor='rgba(245,158,11,.2)'; this.style.background='rgba(245,158,11,.08)'; this.style.boxShadow='none'">
+              <button type="button" onclick="document.getElementById('browseToDate').click()"
+                style="position: absolute; right: 8px; background: linear-gradient(135deg, rgba(245,158,11,.3), rgba(245,158,11,.1)); border: 1.5px solid rgba(245,158,11,.3); color: #fbbf24; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s;"
+                onmouseover="this.style.background='linear-gradient(135deg, rgba(245,158,11,.4), rgba(245,158,11,.2))'; this.style.borderColor='rgba(245,158,11,.5)'; this.style.transform='scale(1.1)'"
+                onmouseout="this.style.background='linear-gradient(135deg, rgba(245,158,11,.3), rgba(245,158,11,.1))'; this.style.borderColor='rgba(245,158,11,.3)'; this.style.transform='scale(1)'">📆</button>
+            </div>
           </div>
         </div>
 
-        <div class="form-row">
-          <label>Google Drive Folder Link</label>
-          <input type="text" id="browseDriveLink"
-                 placeholder="https://drive.google.com/drive/folders/…">
+        <!-- Google Drive Link Field -->
+        <div class="form-row" style="margin-bottom: 20px; animation: slideUp 0.5s ease-out 0.4s both;">
+          <label style="display: block; font-size: .85rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+            🔗 Google Drive Folder Link
+          </label>
+          <input type="text" id="browseDriveLink" placeholder="https://drive.google.com/drive/folders/…"
+            style="width: 100%; padding: 12px 16px; border: 2px solid rgba(168,85,247,.2); border-radius: 10px; font-size: .95rem; background: rgba(168,85,247,.08); color: #f1f5f9; transition: all 0.3s ease; font-family: 'Inter', sans-serif;"
+            onfocus="this.style.borderColor='rgba(168,85,247,.5)'; this.style.background='rgba(168,85,247,.12)'; this.style.boxShadow='0 0 20px rgba(168,85,247,0.2)'"
+            onblur="this.style.borderColor='rgba(168,85,247,.2)'; this.style.background='rgba(168,85,247,.08)'; this.style.boxShadow='none'">
         </div>
-        <div class="browse-actions">
-          <button class="btn-find" id="btnFindPhotos" onclick="fetchBrowsePhotos(false)">
+
+        <!-- Action Buttons -->
+        <div class="browse-actions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; animation: slideUp 0.5s ease-out 0.5s both;">
+          <button class="btn-find" id="btnFindPhotos" onclick="fetchBrowsePhotos(false)"
+            style="padding: 12px 16px; background: linear-gradient(135deg, rgba(59,130,246,.2), rgba(59,130,246,.1)); border: 2px solid rgba(59,130,246,.3); color: #60a5fa; border-radius: 10px; font-size: .95rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;"
+            onmouseover="this.style.background='linear-gradient(135deg, rgba(59,130,246,.3), rgba(59,130,246,.2))'; this.style.borderColor='rgba(59,130,246,.5)'; this.style.boxShadow='0 8px 20px rgba(59,130,246,0.2)'; this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.background='linear-gradient(135deg, rgba(59,130,246,.2), rgba(59,130,246,.1))'; this.style.borderColor='rgba(59,130,246,.3)'; this.style.boxShadow='none'; this.style.transform='translateY(0)'">
             🔍 Find Photos
           </button>
-          <button class="btn-find-new" id="btnFindNew" onclick="fetchBrowsePhotos(true)">
+          <button class="btn-find-new" id="btnFindNew" onclick="fetchBrowsePhotos(true)"
+            style="padding: 12px 16px; background: linear-gradient(135deg, rgba(245,158,11,.2), rgba(245,158,11,.1)); border: 2px solid rgba(245,158,11,.3); color: #fbbf24; border-radius: 10px; font-size: .95rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;"
+            onmouseover="this.style.background='linear-gradient(135deg, rgba(245,158,11,.3), rgba(245,158,11,.2))'; this.style.borderColor='rgba(245,158,11,.5)'; this.style.boxShadow='0 8px 20px rgba(245,158,11,0.2)'; this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.background='linear-gradient(135deg, rgba(245,158,11,.2), rgba(245,158,11,.1))'; this.style.borderColor='rgba(245,158,11,.3)'; this.style.boxShadow='none'; this.style.transform='translateY(0)'">
             🔄 Find New Photos
           </button>
         </div>
 
         <!-- Gallery (hidden until fetch) -->
-        <div id="browseGallery" style="display:none; margin-top:14px;">
-          <div class="browse-toolbar">
-            <div class="browse-count">
-              Found <strong id="browseCountNum">0</strong> photos
+        <div id="browseGallery" style="display:none; margin-top:24px; animation: slideUp 0.6s ease-out;">
+          <!-- Gallery Toolbar -->
+          <div class="browse-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: linear-gradient(135deg, rgba(59,130,246,.1), rgba(59,130,246,.05)); border: 1.5px solid rgba(59,130,246,.2); border-radius: 10px;">
+            <div class="browse-count" style="font-size: .9rem; font-weight: 600; color: #cbd5e1;">
+              📸 Found <strong style="color: #60a5fa;" id="browseCountNum">0</strong> photos
             </div>
-            <select class="per-page-select" id="perPageSel" onchange="renderPage(1)">
+            <select class="per-page-select" id="perPageSel" onchange="renderPage(1)"
+              style="padding: 6px 12px; background: rgba(59,130,246,.15); border: 1.5px solid rgba(59,130,246,.2); color: #cbd5e1; border-radius: 6px; font-size: .85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+              onchange="this.style.background='rgba(59,130,246,.25)'; this.style.borderColor='rgba(59,130,246,.4)'"
+              onblur="this.style.background='rgba(59,130,246,.15)'; this.style.borderColor='rgba(59,130,246,.2)'">
               <option value="10">10 per page</option>
               <option value="20">20 per page</option>
               <option value="30">30 per page</option>
@@ -917,11 +1450,17 @@
             </select>
           </div>
 
+          <!-- Photo Grid -->
           <div class="photo-grid" id="photoGrid"></div>
-          <div class="pagination-bar" id="paginationBar"></div>
 
-          <button class="browse-submit-btn" id="browseSubmitBtn"
-                  onclick="submitBrowseEvent()">
+          <!-- Pagination -->
+          <div class="pagination-bar" id="paginationBar" style="margin-top: 16px; display: flex; justify-content: center; gap: 8px;"></div>
+
+          <!-- Submit Button -->
+          <button class="browse-submit-btn" id="browseSubmitBtn" onclick="submitBrowseEvent()"
+            style="width: 100%; margin-top: 20px; padding: 14px 20px; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: white; border-radius: 10px; font-size: .95rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(34,197,94,0.2);"
+            onmouseover="this.style.background='linear-gradient(135deg, #16a34a, #15803d)'; this.style.boxShadow='0 8px 20px rgba(34,197,94,0.3)'; this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.background='linear-gradient(135deg, #22c55e, #16a34a)'; this.style.boxShadow='0 4px 12px rgba(34,197,94,0.2)'; this.style.transform='translateY(0)'">
             ✅ Submit &amp; Create Event
           </button>
         </div>
@@ -929,14 +1468,19 @@
 
       <!-- Upload tab - Hidden for simplified single-page -->
       <div id="filesTab" style="display:none !important;">
-        <div class="form-row">
-          <label>Select Photos (multiple)</label>
-          <div class="file-drop" id="fileDrop" onclick="document.getElementById('photoFiles').click()">
+        <div class="form-row" style="animation: slideUp 0.5s ease-out;">
+          <label style="display: block; font-size: .85rem; font-weight: 700; color: #cbd5e1; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+            📷 Select Photos (multiple)
+          </label>
+          <div class="file-drop" id="fileDrop" onclick="document.getElementById('photoFiles').click()"
+            style="border: 3px dashed rgba(59,130,246,.3); border-radius: 12px; padding: 32px 24px; text-align: center; cursor: pointer; transition: all 0.3s ease; background: rgba(59,130,246,.05);"
+            onmouseover="this.style.borderColor='rgba(59,130,246,.5)'; this.style.background='rgba(59,130,246,.1)'; this.style.boxShadow='0 8px 20px rgba(59,130,246,0.15)'"
+            onmouseout="this.style.borderColor='rgba(59,130,246,.3)'; this.style.background='rgba(59,130,246,.05)'; this.style.boxShadow='none'">
             <input type="file" id="photoFiles" accept="image/*" multiple
                    style="display:none" onchange="handlePhotoSelect(this.files)">
-            <div class="fd-icon">🖼</div>
-            <div class="fd-text">Click or drag photos here</div>
-            <div class="fd-sub" id="fileCountLabel">JPG / PNG / WEBP — no limit</div>
+            <div class="fd-icon" style="font-size: 2.5rem; margin-bottom: 12px; display: block;">🖼</div>
+            <div class="fd-text" style="font-size: 1rem; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">Click or drag photos here</div>
+            <div class="fd-sub" id="fileCountLabel" style="font-size: .85rem; color: rgba(203,213,225,0.7);">JPG / PNG / WEBP — no limit</div>
           </div>
         </div>
       </div>
@@ -1204,43 +1748,66 @@
 
   // ── Toggle Events Dashboard Panel ────────────────────────────────────
   async function toggleEventsDashboard() {
+    const overlay = document.getElementById('eventsDashboardOverlay');
     const panel = document.getElementById('eventsDashboardPanel');
-    const isHidden = panel.style.display === 'none';
+    const isHidden = overlay.style.display === 'none';
 
     if (isHidden) {
-      // Show panel and load all events
-      panel.style.display = 'block';
+      // Show modal and load all events
+      overlay.style.display = 'flex';
       try {
         const resp = await fetch('/admin/events-history');
         const data = await resp.json();
         const eventsList = document.getElementById('dashboardEventsList');
 
         if (!data.events || data.events.length === 0) {
-          eventsList.innerHTML = '<div style="color: var(--muted); font-size: .85rem; text-align: center; padding: 20px 12px;">No events yet</div>';
+          eventsList.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px;">
+              <div style="font-size: 3rem; margin-bottom: 16px;">📭</div>
+              <div style="color: #cbd5e1; font-size: .95rem; margin-bottom: 8px;">No events created yet</div>
+              <div style="color: rgba(203,213,225,0.6); font-size: .85rem;">Click "Create New Event" to get started with organizing your photos</div>
+            </div>
+          `;
           return;
         }
 
-        eventsList.innerHTML = data.events.map(evt => `
-          <div style="background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2); border-radius: 8px; padding: 12px; transition: all .2s;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <div style="font-weight: 600; font-size: .95rem; cursor: pointer; color: #3b82f6;" onclick="document.getElementById('eventsDashboardPanel').style.display='none';">${evt.name}</div>
-              <span style="background: ${evt.current_status === 'ready' ? 'rgba(34,197,94,.2)' : evt.current_status === 'error' ? 'rgba(239,68,68,.2)' : 'rgba(245,158,11,.2)'}; color: ${evt.current_status === 'ready' ? '#22c55e' : evt.current_status === 'error' ? '#ef4444' : '#f59e0b'}; padding: 2px 8px; border-radius: 4px; font-size: .75rem; font-weight: 600;">${evt.current_status}</span>
+        eventsList.innerHTML = data.events.map((evt, idx) => `
+          <div style="background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(59,130,246,.05)); border: 1.5px solid rgba(59,130,246,.2); border-radius: 10px; padding: 14px; transition: all .2s; animation: slideUp 0.4s ease-out; animation-delay: ${idx * 0.05}s; animation-fill-mode: both;" onmouseover="this.style.background='linear-gradient(135deg, rgba(59,130,246,.18), rgba(59,130,246,.1))'; this.style.boxShadow='0 8px 20px rgba(59,130,246,0.2)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(59,130,246,.12), rgba(59,130,246,.05))'; this.style.boxShadow='none'">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: .95rem; color: #ffffff; margin-bottom: 2px;">${evt.name}</div>
+                <div style="font-size: .8rem; color: rgba(203,213,225,0.6);">📸 ${evt.photo_count} photo${evt.photo_count !== 1 ? 's' : ''}</div>
+              </div>
+              <span style="background: ${evt.current_status === 'ready' ? 'linear-gradient(135deg, rgba(34,197,94,.3), rgba(34,197,94,.1))' : evt.current_status === 'error' ? 'linear-gradient(135deg, rgba(239,68,68,.3), rgba(239,68,68,.1))' : 'linear-gradient(135deg, rgba(245,158,11,.3), rgba(245,158,11,.1))'}; color: ${evt.current_status === 'ready' ? '#22c55e' : evt.current_status === 'error' ? '#ef4444' : '#f59e0b'}; padding: 4px 10px; border-radius: 6px; font-size: .75rem; font-weight: 700; border: 1px solid ${evt.current_status === 'ready' ? 'rgba(34,197,94,.4)' : evt.current_status === 'error' ? 'rgba(239,68,68,.4)' : 'rgba(245,158,11,.4)'};">${evt.current_status === 'ready' ? '✓ Ready' : evt.current_status === 'error' ? '⚠ Error' : '⏳ Processing'}</span>
             </div>
-            <div style="font-size: .85rem; color: var(--muted); margin-bottom: 8px;">${evt.photo_count} photo${evt.photo_count !== 1 ? 's' : ''}</div>
-            <div style="display: flex; gap: 6px;">
-              <button onclick="document.getElementById('eventsDashboardPanel').style.display='none'; selectEvent('${evt.id}', '${evt.name}', '${evt.current_status}'); setTimeout(() => reindexEvent(), 300);" style="flex: 1; padding: 6px 10px; background: #f59e0b; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: .8rem;">🔄 Reindex</button>
-              <button onclick="deleteEvent('${evt.id}', '${evt.name}')" style="padding: 6px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: .8rem;">🗑</button>
+            <div style="display: flex; gap: 8px;">
+              <button onclick="toggleEventsDashboard(); selectEvent('${evt.id}', '${evt.name}', '${evt.current_status}'); setTimeout(() => reindexEvent(), 300);" style="flex: 1; padding: 8px 12px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: .8rem; transition: all .2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(245,158,11,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">🔄 Reindex</button>
+              <button onclick="deleteEvent('${evt.id}', '${evt.name}')" style="padding: 8px 12px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: .8rem; transition: all .2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(239,68,68,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">🗑 Delete</button>
+              <button onclick="toggleEventsDashboard(); selectEvent('${evt.id}', '${evt.name}', '${evt.current_status}')" style="padding: 8px 12px; background: rgba(59,130,246,.15); color: #60a5fa; border: 1.5px solid rgba(59,130,246,.2); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: .8rem; transition: all .2s;" onmouseover="this.style.background='rgba(59,130,246,.25)'; this.style.borderColor='rgba(59,130,246,.4)'" onmouseout="this.style.background='rgba(59,130,246,.15)'; this.style.borderColor='rgba(59,130,246,.2)'">👁 View</button>
             </div>
           </div>
         `).join('');
       } catch (e) {
         console.error('Error loading events:', e);
+        eventsList.innerHTML = '<div style="color: #ef4444; font-size: .85rem; text-align: center; padding: 20px 12px;">❌ Error loading events</div>';
       }
     } else {
-      // Hide panel
-      panel.style.display = 'none';
+      // Hide modal
+      overlay.style.display = 'none';
     }
   }
+
+  // Close modal when clicking overlay background
+  document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('eventsDashboardOverlay');
+    if (overlay) {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.style.display = 'none';
+        }
+      });
+    }
+  });
 
   // ── Delete event ────────────────────────────────────────────────────
   async function deleteEvent(eventId, eventName) {
@@ -2134,7 +2701,7 @@
 <!-- ══ END OF COMMENTED-OUT RAZORPAY / SUBSCRIPTION BLOCK ══ -->
 
 <!-- ══ SUBSCRIPTION PAYMENT MODAL (UPI QR) ══ -->
-<div id="subscriptionModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.7); z-index:1000; display:flex; align-items:center; justify-content:center;">
+<div id="subscriptionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.7); z-index: 1000; align-items: center; justify-content: center;">
   <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; width:90%; max-width:600px; padding:32px; box-shadow:0 20px 60px rgba(0,0,0,.4);">
 
     <!-- Step 1: Plan Selection -->
@@ -2305,7 +2872,8 @@ function showSubscriptionExpiredModal() {
 
 // Reset plans section when reopening normal subscription flow
 function openSubscriptionModal() {
-  document.getElementById('subscriptionModal').style.display = 'flex';
+  const modal = document.getElementById('subscriptionModal');
+  modal.style.display = 'flex';
   // Reset to original plan display
   const stepPlans = document.getElementById('step-plans');
   stepPlans.innerHTML = `
@@ -2413,7 +2981,84 @@ document.addEventListener('DOMContentLoaded', function() {
       toast('⚠️ Your subscription has expired. Click "Get Subscription" to renew.', '#f59e0b');
     }, 500);
   }
+
+  // ── Initialize Flatpickr Calendar ────────────────────────────────────
+  initializeCalendar();
 });
+
+function initializeCalendar() {
+  // From Date Calendar
+  window._fromDatePicker = flatpickr('#browseFromDate', {
+    mode: 'single',
+    dateFormat: 'd-m-Y',
+    enableTime: false,
+    animate: true,
+    allowInput: true,
+    minDate: 'today',
+    positionElement: document.getElementById('browseFromDate'),
+    onChange: function(selectedDates) {
+      // Disable dates before selected from date in To Date picker
+      const fromDate = selectedDates[0];
+      if (fromDate && window._toDatePicker) {
+        window._toDatePicker.set('minDate', fromDate);
+      }
+      // Update input value display
+      if (selectedDates.length > 0) {
+        const dateStr = formatDate(selectedDates[0]);
+        document.getElementById('browseFromDate').value = dateStr;
+      }
+    },
+    onOpen: function() {
+      const picker = document.querySelector('.flatpickr-calendar');
+      if (picker) {
+        picker.style.animation = 'slideUp 0.3s ease-out';
+      }
+    }
+  });
+
+  // To Date Calendar
+  window._toDatePicker = flatpickr('#browseToDate', {
+    mode: 'single',
+    dateFormat: 'd-m-Y',
+    enableTime: false,
+    animate: true,
+    allowInput: true,
+    minDate: 'today',
+    positionElement: document.getElementById('browseToDate'),
+    onChange: function(selectedDates) {
+      // Ensure To Date is not before From Date
+      const toDate = selectedDates[0];
+      const fromDateInput = document.getElementById('browseFromDate');
+      if (fromDateInput && fromDateInput.value && toDate) {
+        const fromDate = window._fromDatePicker.selectedDates[0];
+        if (fromDate && toDate < fromDate) {
+          // If To Date is before From Date, reset it
+          window._toDatePicker.setDate(fromDate);
+        }
+      }
+      // Update input value display
+      if (selectedDates.length > 0) {
+        const dateStr = formatDate(selectedDates[0]);
+        document.getElementById('browseToDate').value = dateStr;
+      }
+    },
+    onOpen: function() {
+      const picker = document.querySelector('.flatpickr-calendar');
+      if (picker) {
+        picker.style.animation = 'slideUp 0.3s ease-out';
+      }
+    }
+  });
+}
+
+// Helper function to format date
+function formatDate(date) {
+  if (!date) return '';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+}
 </script>
 
 </body>
